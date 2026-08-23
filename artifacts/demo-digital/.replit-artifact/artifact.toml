@@ -1,14 +1,14 @@
 kind = "web"
-previewPath = "/"
-title = "Demo Digital"
-description = "Platform sosial untuk menyuarakan isu, menggalang dukungan digital, dan menggerakkan perubahan bersama."
+previewPath = "/pecintaKalah/"
+title = "Demo Digital — pecintaKalah"
+description = "Platform sosial pecintaKalah untuk menyuarakan isu, menggalang dukungan digital, dan menggerakkan perubahan bersama."
 version = "1.0.0"
 id = "artifacts/demo-digital"
 router = "path"
 
 [[services]]
 name = "web"
-paths = [ "/" ]
+paths = [ "/pecintaKalah/" ]
 localPort = 21607
 
 [services.development]
@@ -25,4 +25,4 @@ to = "/index.html"
 
 [services.env]
 PORT = "21607"
-BASE_PATH = "/"
+BASE_PATH = "/pecintaKalah/"
