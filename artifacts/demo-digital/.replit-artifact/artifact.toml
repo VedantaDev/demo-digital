@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Demo Digital"
+description = "Platform sosial untuk menyuarakan isu, menggalang dukungan digital, dan menggerakkan perubahan bersama."
+version = "1.0.0"
+id = "artifacts/demo-digital"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21607
+
+[services.development]
+run = "pnpm --filter @workspace/demo-digital run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/demo-digital", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/demo-digital/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21607"
+BASE_PATH = "/"
