@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Dispatch, FormEvent, ReactNode, SetStateAction } from 'react';
 import { Link, Route, Switch, useLocation, useParams, Router as WouterRouter } from 'wouter';
+import { isValidNIK } from './utils/validateNik';
 import {
   ArrowLeft, ArrowRight, BadgeCheck, Bell, Check, ChevronRight, CircleDollarSign,
   Clock3, Compass, Heart, Home, Landmark, LockKeyhole, LogOut, MessageSquare,
@@ -12,7 +13,6 @@ type Issue = {
   target: number; supporters: number; comments: number; author: string; time: string; hot?: boolean;
 };
 
-const NIKS = ['1111111111111111', '2222222222222222', '3333333333333333', '4444444444444444', '5555555555555555'];
 const ASSET_BASE = import.meta.env.BASE_URL;
 const initialIssues: Issue[] = [
   { id: 'mbg-tepat-sasaran', category: 'PENDIDIKAN & GIZI', title: 'Pastikan MBG hadir tepat sasaran untuk anak Indonesia', description: 'Dorong transparansi anggaran, kualitas menu, dan pengawasan distribusi agar program Makan Bergizi Gratis benar-benar sampai ke anak yang membutuhkan.', votes: 18240, target: 20000, supporters: 1248, comments: 356, author: 'Suara Pelajar Nusantara', time: '47 menit lalu', hot: true },
@@ -35,7 +35,8 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const submit = (e: FormEvent) => {
     e.preventDefault(); setError('');
-    if (!NIKS.includes(nik)) { setError('NIK tidak terdaftar. Silakan periksa kembali NIK Anda.'); return; }
+    const validation = isValidNIK(nik);
+    if (!validation.valid) { setError(validation.message); return; }
     setLoading(true); setTimeout(() => { setLocation('/beranda'); }, 650);
   };
   return <div className="noise relative min-h-[100dvh] overflow-hidden bg-zinc-950">
@@ -110,12 +111,16 @@ function NewIssueModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (
 }
 
 function Beranda({ issues, setIssues }: { issues: Issue[]; setIssues: Dispatch<SetStateAction<Issue[]>> }) {
-  const [search, setSearch] = useState(''); const [modal, setModal] = useState(false); const [voted, setVoted] = useState<string[]>([]);
+  const [search, setSearch] = useState(''); const [modal, setModal] = useState(false); const [voted, setVoted] = useState<string[]>([]); const [heroSlide, setHeroSlide] = useState(0); const [actionEnd] = useState(() => Date.now() + 9 * 24 * 60 * 60 * 1000);
   const filtered = useMemo(() => issues.filter(i => `${i.title} ${i.description} ${i.category}`.toLowerCase().includes(search.toLowerCase())), [issues, search]);
   const vote = (id: string) => { if (voted.includes(id)) return; setVoted(v => [...v, id]); setIssues(all => all.map(i => i.id === id ? { ...i, votes: i.votes + 1, supporters: i.supporters + 1 } : i)); };
   const addIssue = (title: string, desc: string) => { const id = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `isu-${Date.now()}`; setIssues(all => [{ id, category: 'SUARA WARGA', title, description: desc, votes: 1, target: 5000, supporters: 1, comments: 0, author: 'Kamu', time: 'baru saja' }, ...all]); setModal(false); };
   return <Shell issuesCount={issues.length}><div className="mx-auto max-w-[1200px] px-5 py-8 md:px-10 md:py-12">
-    <section className="animate-rise relative min-h-[310px] overflow-hidden border border-[#ff304f]/40 bg-zinc-900/50 p-6 red-glow md:p-10"><img src={`${ASSET_BASE}hero-pecintakalah.jpeg`} alt="Aksi warga menyuarakan perubahan" className="absolute inset-0 h-full w-full object-cover object-center opacity-35" /><div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(9,9,11,.98)_0%,rgba(9,9,11,.78)_52%,rgba(9,9,11,.26)_100%)]" /><div className="absolute right-0 top-0 h-full w-1/2 opacity-25" style={{ backgroundImage: 'radial-gradient(circle at 80% 20%, #ff304f 0, transparent 1px)', backgroundSize: '18px 18px' }} /><div className="relative max-w-2xl"><div className="mb-5 flex items-center gap-2 text-[#ff6178]"><Zap size={15} fill="currentColor" /><span className="mono text-[10px] font-bold uppercase tracking-[.24em]">pecintaKalah / ruang isu nasional</span></div><h1 className="text-4xl font-semibold tracking-[-.05em] md:text-6xl">Keresahanmu<br /><span className="text-[#ff304f]">punya tempat.</span></h1><p className="mt-5 max-w-lg text-sm leading-6 text-zinc-300 md:text-base">Baca. Pilih. Bergerak. Setiap dukungan menambah tekanan yang terlihat dan membuat perubahan tak bisa diabaikan.</p><button onClick={() => setModal(true)} className="btn-primary mt-7 flex items-center gap-2 px-5 py-3 text-sm font-medium"><Plus size={17} /> Buat isu baru</button></div><div className="absolute bottom-5 right-7 hidden text-right md:block"><p className="mono text-[9px] uppercase tracking-[.2em] text-zinc-400">sinyal warga</p><p className="mt-1 text-4xl font-medium text-zinc-100">+24.8K</p></div></section>
+    <section className="animate-rise relative min-h-[310px] overflow-hidden border border-[#ff304f]/40 bg-zinc-900/50 p-6 red-glow md:p-10">
+      {heroSlide === 0 ? <><img src={`${ASSET_BASE}hero-pecintakalah.jpeg`} alt="Aksi warga menyuarakan perubahan" className="absolute inset-0 h-full w-full object-cover object-center opacity-35" /><div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(9,9,11,.98)_0%,rgba(9,9,11,.78)_52%,rgba(9,9,11,.26)_100%)]" /><div className="relative max-w-2xl"><div className="mb-5 flex items-center gap-2 text-[#ff6178]"><Zap size={15} fill="currentColor" /><span className="mono text-[10px] font-bold uppercase tracking-[.24em]">pecintaKalah / ruang isu nasional</span></div><h1 className="text-4xl font-semibold tracking-[-.05em] md:text-6xl">Keresahanmu<br /><span className="text-[#ff304f]">punya tempat.</span></h1><p className="mt-5 max-w-lg text-sm leading-6 text-zinc-300 md:text-base">Baca. Pilih. Bergerak. Setiap dukungan menambah tekanan yang terlihat dan membuat perubahan tak bisa diabaikan.</p><button onClick={() => setModal(true)} className="btn-primary mt-7 flex items-center gap-2 px-5 py-3 text-sm font-medium"><Plus size={17} /> Buat isu baru</button></div><div className="absolute bottom-5 right-7 hidden text-right md:block"><p className="mono text-[9px] uppercase tracking-[.2em] text-zinc-400">sinyal warga</p><p className="mt-1 text-4xl font-medium text-zinc-100">+24.8K</p></div></> : <div className="relative flex min-h-[260px] flex-col justify-center"><div className="mb-5 flex items-center gap-2 text-[#ff6178]"><Clock3 size={15} /><span className="mono text-[10px] font-bold uppercase tracking-[.24em]">aksi demo nasional / hitung mundur</span></div><h2 className="max-w-xl text-4xl font-semibold tracking-[-.05em] md:text-6xl">Sembilan hari<br /><span className="text-[#ff304f]">untuk bergerak.</span></h2><p className="mt-4 max-w-lg text-sm leading-6 text-zinc-400">Satukan suara dan hadir dalam aksi yang menuntut perubahan nyata.</p><div className="mt-7"><Countdown end={actionEnd} /></div></div>}
+      <button aria-label="Slide sebelumnya" onClick={() => setHeroSlide(s => s === 0 ? 1 : 0)} className="absolute bottom-5 left-1/2 flex -translate-x-1/2 gap-2" >{[0, 1].map(slide => <span key={slide} className={`h-1.5 transition-all ${heroSlide === slide ? 'w-8 bg-[#ff304f] shadow-[0_0_10px_#ff304f]' : 'w-3 bg-zinc-600'}`} />)}</button>
+      <button aria-label="Ganti slide" onClick={() => setHeroSlide(s => s === 0 ? 1 : 0)} className="absolute right-5 top-5 border border-zinc-700 px-3 py-1.5 text-[10px] text-zinc-400 transition hover:border-[#ff304f] hover:text-[#ff6178]">{heroSlide === 0 ? 'LIHAT COUNTDOWN' : 'LIHAT AKSI'} <ChevronRight size={13} className="ml-1 inline" /></button>
+    </section>
     <div className="my-9"><StatStrip /></div>
     <section className="animate-rise animate-delay-1"><div className="mb-6 flex flex-col justify-between gap-5 md:flex-row md:items-end"><div><p className="mono mb-2 text-[10px] uppercase tracking-[.2em] text-[#ff6178]">prioritas komunitas</p><h2 className="text-2xl font-medium tracking-tight md:text-3xl">Isu yang sedang bergerak</h2></div><div className="flex flex-col gap-3 sm:flex-row"><div className="relative"><Search size={16} className="absolute left-3 top-3 text-zinc-600" /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari isu..." className="field h-10 w-full pl-9 pr-3 text-sm sm:w-52" /></div><button className="btn-quiet flex h-10 items-center justify-center gap-2 px-3 text-xs"><Sparkles size={14} /> Paling ramai <ChevronRight size={13} /></button></div></div><div className="grid gap-4">{filtered.map((issue, idx) => <div key={issue.id} className={`animate-rise animate-delay-${Math.min(idx + 1, 3)}`}><IssueCard issue={issue} voted={voted.includes(issue.id)} onVote={() => vote(issue.id)} /></div>)}{filtered.length === 0 && <div className="border border-dashed border-zinc-700 py-16 text-center"><Search className="mx-auto mb-3 text-zinc-600" size={25} /><p className="text-zinc-300">Isu tidak ditemukan</p><p className="mt-1 text-sm text-zinc-600">Coba kata kunci lain atau buat isu baru.</p></div>}</div></section>
     <div className="mt-12 flex items-center justify-between border-t border-zinc-800 pt-5 text-xs text-zinc-600"><span>Menampilkan {filtered.length} dari {issues.length} isu</span><span className="mono">data diperbarui langsung</span></div>
@@ -138,7 +143,7 @@ function DonationModal({ onClose, onDonate }: { onClose: () => void; onDonate: (
 
 function Detail({ issues, setIssues }: { issues: Issue[]; setIssues: Dispatch<SetStateAction<Issue[]>> }) {
   const params = useParams<{ id: string }>(); const [, setLocation] = useLocation(); const issue = issues.find(i => i.id === params.id) || issues[0]; const [voted, setVoted] = useState(false); const [donate, setDonate] = useState(false);
-  const [end] = useState(() => Date.now() + 3 * 24 * 60 * 60 * 1000);
+  const [end] = useState(() => Date.now() + 9 * 24 * 60 * 60 * 1000);
   if (!issue) return null;
   const vote = () => { if (voted) return; setVoted(true); setIssues(all => all.map(i => i.id === issue.id ? { ...i, votes: i.votes + 1, supporters: i.supporters + 1 } : i)); };
   return <Shell issuesCount={issues.length}><div className="mx-auto max-w-[1200px] px-5 py-8 md:px-10 md:py-12">
