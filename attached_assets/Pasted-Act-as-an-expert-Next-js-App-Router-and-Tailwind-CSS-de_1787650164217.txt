@@ -1,0 +1,34 @@
+Act as an expert Next.js (App Router) and Tailwind CSS developer. Build a complete prototype for a web application called "Demo Digital".
+
+Design System: 
+Strictly Dark Mode. Main background `bg-zinc-950`, text white. Use neon red accents (`text-red-500`, `bg-red-600`) and red glowing box-shadows (e.g., `shadow-[0_0_15px_rgba(220,38,38,0.5)]`) for buttons and active elements to give a rebel, serious, and futuristic vibe. Use 'lucide-react' for icons. 
+Assume these assets exist in the `/public` folder: `/logo.png`, `/avatar.png`, `/hero.jpg`.
+
+Please implement the following architecture and features:
+
+1. NIK VALIDATION ALGORITHM (Create in `utils/validateNik.js`)
+Write a JavaScript function `isValidNIK(nik)` that checks if the string is exactly 16 digits. It must extract the date (digits 7-8), month (digits 9-10), and year (digits 11-12). Implement logic where female birth dates have +40 on the day. Validate that the extracted month is between 1-12 and the real day is between 1-31. Return an object `{ valid: boolean, message: string }`.
+
+2. LOGIN PAGE (`app/page.js`)
+- A sleek, centered login form. 
+- Input field for NIK (max length 16, numbers only).
+- On submit, run `isValidNIK(nik)`. If invalid, show the specific red error message from the utility function. If valid, redirect the user to `/beranda`.
+
+3. BERANDA / RUANG ISU (`app/beranda/page.js`)
+- Navbar: App logo on the left, user avatar on the right.
+- Hero Section: Use `/hero.jpg` as the background with a dark gradient overlay. Headline: "Suarakan Isu, Gerakkan Perubahan".
+- State Management: Use React `useState` to store a list of issues (e.g., "Jalan Rusak Daerah X", "Makan Bergizi Gratis").
+- Issue Cards: Display each issue with a title, short description, an "UpVote" button that increments a counter, and a "Lihat Detail" button linking to a dynamic route (e.g., `/isu/[id]`).
+- Submit Button: A floating or prominent button to add a new issue via a simple form (Title, Description) that updates the state.
+
+4. ISSUE DETAIL & RUNNING COUNTDOWN (`app/isu/[id]/page.js`)
+- Display the issue details.
+- Running Countdown Timer: Use `useEffect` and `setInterval` to create a live, ticking countdown timer targeting a date exactly 3 days from the current time. Display it in `HH:MM:SS` format. It MUST tick down every second. If the time reaches zero, clear the interval and freeze the timer at `00:00:00`.
+- Include a "Donasi Gerakan" button with a strong neon red glow.
+
+5. DONATION MODAL & SUCCESS PAGE
+- Clicking "Donasi Gerakan" opens a Modal with two options: "Rp 10.000" and "Rp 50.000".
+- Clicking an option triggers a 1-second loading state, then strictly redirects via `useRouter` to `/payment-success`.
+- `app/payment-success/page.js`: A satisfying success screen with a glowing green checkmark, a thank you message, and a "Kembali ke Beranda" button.
+
+Ensure all code is clean, modular, and the UI is fully responsive. Do not use a real database, just React state for this prototype iteration.

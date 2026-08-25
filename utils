@@ -1,0 +1,28 @@
+// utils/validateNik.js
+
+export function isValidNIK(nik) {
+  // 1. Cek apakah panjangnya 16 dan hanya berisi angka
+  const regex = /^\d{16}$/;
+  if (!regex.test(nik)) {
+    return { valid: false, message: "NIK harus terdiri dari 16 digit angka." };
+  }
+
+  // 2. Ekstrak bagian tanggal, bulan, dan tahun (digit ke-7 sampai 12)
+  const dd = parseInt(nik.substring(6, 8));
+  const mm = parseInt(nik.substring(8, 10));
+  const yy = parseInt(nik.substring(10, 12));
+
+  // 3. Logika Tanggal Lahir Perempuan (+40)
+  const realDay = dd > 40 ? dd - 40 : dd;
+
+  // 4. Validasi Bulan (1-12) dan Tanggal (1-31)
+  if (mm < 1 || mm > 12) {
+    return { valid: false, message: "Digit bulan lahir pada NIK tidak valid." };
+  }
+  if (realDay < 1 || realDay > 31) {
+    return { valid: false, message: "Digit tanggal lahir pada NIK tidak valid." };
+  }
+
+  // Jika lolos semua penyaringan di atas:
+  return { valid: true, message: "NIK Valid." };
+}
