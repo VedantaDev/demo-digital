@@ -1,0 +1,21 @@
+Act as an expert Full-Stack Next.js developer. We are upgrading the "Demo Digital" app to use a real database for the discussion forum and adding a "Fake Netizen Engine" to simulate active engagement.
+
+Please execute the following steps carefully:
+
+1. Install the `@supabase/supabase-js` package.
+2. Create a utility file `lib/supabase.js` to initialize the Supabase client using `process.env.NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+3. Create a new API Route at `app/api/comments/route.js`:
+   - GET method: Extract `issue_id` from the URL parameters. Fetch all rows from the `comments` table where `issue_id` matches, ordered by `created_at` ascending. Return as JSON.
+   - POST method: Accept `{ issue_id, author, content }` from the request body. Insert this user comment into the `comments` table.
+4. FAKE NETIZEN LOGIC (Inside the POST method): 
+   - Immediately after successfully inserting the user's comment, write logic to simulate a bot replying. 
+   - Create an array of fake usernames (e.g., "Aktivis_Jalanan", "Anon_Kritis", "Rakyat_Biasa").
+   - Create an array of smart, solution-oriented replies (e.g., "Gue setuju banget. Solusinya pemda harus open data soal alokasi dana infrastruktur daerah ini.", "Menurut saya, kita harus galang petisi online juga selain donasi, biar diteken langsung sama bupati.", "Betul, pengawasan langsung dari warga kayak gini yang bikin birokrasi ga bisa main-main lagi.").
+   - Randomly select one fake username and one reply.
+   - Insert this fake bot comment into the `comments` table with the same `issue_id` so it appears as a reply in the discussion thread.
+5. Update the Issue Detail Page UI (`app/isu/[id]/page.js`):
+   - Add a `useEffect` to fetch comments from `/api/comments?issue_id={id}` on component mount.
+   - Build a sleek discussion UI below the issue details. Keep the dark mode, zinc backgrounds, and neon red accents.
+   - Create a form to submit a new comment. When submitted, POST the data to `/api/comments`, clear the input, and re-fetch the comments so the user instantly sees their comment AND the fake netizen's auto-reply.
+
+Ensure the code is robust and handles loading/error states cleanly.

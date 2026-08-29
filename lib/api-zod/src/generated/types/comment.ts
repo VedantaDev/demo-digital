@@ -6,6 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface HealthStatus {
-  status: string;
+export interface Comment {
+  id?: string;
+  issue_id: string;
+  author: string;
+  content: string;
+  created_at?: Date;
 }

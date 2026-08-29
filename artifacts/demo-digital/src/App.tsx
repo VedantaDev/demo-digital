@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
-import type { Dispatch, ReactNode, SetStateAction } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { Dispatch, FormEvent, ReactNode, SetStateAction } from 'react';
 import { Link, Route, Switch, useLocation, useParams, Router as WouterRouter } from 'wouter';
 import Tesseract from 'tesseract.js';
 import { isValidNIK } from './utils/validateNik';
 import {
   ArrowLeft, ArrowRight, BadgeCheck, Check, CheckCircle2, ChevronRight, CircleDollarSign,
-  Clock3, Compass, Heart, Home, Landmark, LockKeyhole, LogOut, MessageSquare,
-  Plus, Radio, RefreshCcw, ScanLine, Search, ShieldCheck, Sparkles, ThumbsUp,
+  Clock3, Compass, Heart, Home, Landmark, Loader2, LockKeyhole, LogOut, MessageSquare,
+  Plus, Radio, RefreshCcw, ScanLine, Search, Send, ShieldCheck, Sparkles, ThumbsUp,
   Upload, Users, X, Zap,
 } from 'lucide-react';
 
@@ -205,6 +205,114 @@ function DonationModal({ onClose, onDonate }: { onClose: () => void; onDonate: (
   </div></div>;
 }
 
+type CommentItem = {
+  id?: string | number;
+  issue_id: string;
+  author: string;
+  content: string;
+  created_at?: string;
+};
+
+const fakeCommentAuthors = new Set(['Aktivis_Jalanan', 'Anon_Kritis', 'Rakyat_Biasa']);
+
+function formatCommentDate(value?: string) {
+  if (!value) return 'baru saja';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'baru saja';
+  return new Intl.DateTimeFormat('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+}
+
+function Discussion({ issueId }: { issueId: string }) {
+  const [comments, setComments] = useState<CommentItem[]>([]);
+  const [commentText, setCommentText] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const loadComments = useCallback(async (signal?: AbortSignal) => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await fetch(`/api/comments?issue_id=${encodeURIComponent(issueId)}`, { signal });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Komentar belum dapat dimuat.');
+      }
+      setComments(Array.isArray(payload) ? payload : []);
+    } catch (cause) {
+      if (cause instanceof Error && cause.name === 'AbortError') return;
+      setError(cause instanceof Error ? cause.message : 'Komentar belum dapat dimuat.');
+    } finally {
+      if (!signal?.aborted) setLoading(false);
+    }
+  }, [issueId]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void loadComments(controller.signal);
+    return () => controller.abort();
+  }, [loadComments]);
+
+  const submitComment = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const content = commentText.trim();
+    if (!content || submitting) return;
+
+    setSubmitting(true);
+    setError('');
+    try {
+      const response = await fetch('/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          issue_id: issueId,
+          author: 'Warga Terverifikasi',
+          content,
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Komentar belum dapat dikirim.');
+      }
+      setCommentText('');
+      await loadComments();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Komentar belum dapat dikirim.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return <section className="mt-12 border-t border-zinc-800 pt-9">
+    <div className="flex flex-wrap items-end justify-between gap-3">
+      <div><p className="mono mb-2 text-[9px] uppercase tracking-[.2em] text-[#ff6178]">ruang percakapan</p><h2 className="text-2xl font-medium">Diskusi warga</h2></div>
+      <span className="mono text-xs text-zinc-600">{comments.length} komentar</span>
+    </div>
+    <div className="mt-6 space-y-3">
+      {loading && <div className="flex items-center gap-3 border border-zinc-800 bg-zinc-900/40 p-5 text-sm text-zinc-500"><Loader2 size={16} className="animate-spin text-[#ff6178]" /> Memuat percakapan...</div>}
+      {!loading && error && <div className="border border-[#ff304f]/40 bg-[#ff304f]/[.06] p-4 text-sm text-[#ff8495]"><p>{error}</p><button type="button" onClick={() => void loadComments()} className="mt-3 text-xs text-zinc-300 underline underline-offset-4">Coba lagi</button></div>}
+      {!loading && !error && comments.length === 0 && <div className="border border-dashed border-zinc-700 p-7 text-center text-sm text-zinc-500">Belum ada percakapan. Jadilah warga pertama yang menyampaikan pendapat.</div>}
+      {!loading && !error && comments.map((comment, index) => {
+        const isBot = fakeCommentAuthors.has(comment.author);
+        return <article key={comment.id ?? `${comment.author}-${index}`} className={`border p-5 ${isBot ? 'border-[#ff304f]/25 bg-[#ff304f]/[.035]' : 'border-zinc-800 bg-zinc-900/35'}`}>
+          <div className="flex items-start justify-between gap-4"><div className="flex items-center gap-3"><div className={`flex h-8 w-8 items-center justify-center rounded-full border text-xs font-medium ${isBot ? 'border-[#ff304f]/50 bg-[#ff304f]/10 text-[#ff6178]' : 'border-zinc-700 bg-zinc-800 text-zinc-300'}`}>{comment.author.slice(0, 1).toUpperCase()}</div><div><p className="text-sm font-medium text-zinc-200">{comment.author}</p>{isBot && <p className="mono mt-0.5 text-[8px] tracking-[.16em] text-[#ff6178]">SIMULASI NETIZEN</p>}</div></div><time className="mono shrink-0 text-[9px] text-zinc-600">{formatCommentDate(comment.created_at)}</time></div>
+          <p className="mt-4 text-sm leading-6 text-zinc-400">{comment.content}</p>
+        </article>;
+      })}
+    </div>
+    <form onSubmit={submitComment} className="mt-6 border border-zinc-800 bg-zinc-900/40 p-5">
+      <label htmlFor="comment-content" className="mono mb-3 block text-[9px] uppercase tracking-[.2em] text-zinc-500">Tulis tanggapanmu</label>
+      <textarea id="comment-content" value={commentText} onChange={event => setCommentText(event.target.value)} maxLength={1000} rows={4} placeholder="Bagikan pendapat atau solusi yang relevan..." className="field w-full resize-none p-4 text-sm leading-6" disabled={submitting} />
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3"><span className="text-[10px] text-zinc-600">{commentText.length}/1000 karakter</span><button type="submit" disabled={!commentText.trim() || submitting} className="btn-primary flex items-center gap-2 px-5 py-2.5 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-45">{submitting ? <><Loader2 size={15} className="animate-spin" /> Mengirim...</> : <><Send size={15} /> Kirim komentar</>}</button></div>
+    </form>
+  </section>;
+}
+
 function Detail({ issues, setIssues }: { issues: Issue[]; setIssues: Dispatch<SetStateAction<Issue[]>> }) {
   const params = useParams<{ id: string }>(); const [, setLocation] = useLocation(); const issue = issues.find(i => i.id === params.id) || issues[0]; const [voted, setVoted] = useState(false); const [donate, setDonate] = useState(false);
   const [end] = useState(() => Date.now() + 9 * 24 * 60 * 60 * 1000);
@@ -216,8 +324,9 @@ function Detail({ issues, setIssues }: { issues: Issue[]; setIssues: Dispatch<Se
     <button onClick={() => setLocation('/beranda')} className="mb-9 flex items-center gap-2 text-sm text-zinc-500 transition hover:text-zinc-100"><ArrowLeft size={16} /> Kembali ke ruang isu</button>
     <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_340px]"><article className="animate-rise"><div className="mb-6 flex flex-wrap items-center gap-3"><span className="h-2 w-2 rounded-full bg-[#ff304f] shadow-[0_0_12px_#ff304f]" /><span className="mono text-[10px] tracking-[.22em] text-[#ff6178]">{issue.category}</span><span className="text-zinc-700">/</span><span className="text-xs text-zinc-600">ISU AKTIF</span></div><h1 className="max-w-3xl text-4xl font-semibold leading-[1.03] tracking-[-.05em] text-zinc-50 md:text-6xl">{issue.title}</h1><div className="mt-6 flex items-center gap-3 text-xs text-zinc-500"><img src={`${ASSET_BASE}avatar.png`} alt="" className="h-7 w-7 rounded-full object-cover" /><span>Diprakarsai oleh <strong className="font-medium text-zinc-300">{issue.author}</strong></span><span className="text-zinc-700">•</span><span>{issue.time}</span></div><div className="mt-10 border-l-2 border-[#ff304f] pl-5 text-base leading-8 text-zinc-300 md:text-lg">{issue.description}</div><div className="mt-10 border-y border-zinc-800 py-7"><div className="mb-3 flex items-end justify-between"><div><p className="mono text-[9px] uppercase tracking-widest text-zinc-600">batas dukungan</p><p className="mt-1 text-3xl font-medium">{formatNum(issue.votes)} <span className="text-base font-normal text-zinc-600">/ {formatNum(issue.target)} suara</span></p></div><span className="text-sm text-[#ff6178]">{Math.round((issue.votes / issue.target) * 100)}%</span></div><div className="h-2 bg-zinc-800"><div className="h-full bg-[#ff304f] shadow-[0_0_15px_rgba(255,48,79,.5)]" style={{ width: `${Math.min(100, issue.votes / issue.target * 100)}%` }} /></div></div><div className="mt-9"><h2 className="text-xl font-medium">Kenapa dukunganmu penting?</h2><div className="mt-5 grid gap-4 sm:grid-cols-3"><div className="border border-zinc-800 p-4"><Users size={19} className="mb-4 text-[#ff6178]" /><p className="text-sm font-medium text-zinc-200">{formatNum(issue.supporters)} warga</p><p className="mt-1 text-xs leading-5 text-zinc-600">sudah berdiri bersama</p></div><div className="border border-zinc-800 p-4"><Landmark size={19} className="mb-4 text-[#ff6178]" /><p className="text-sm font-medium text-zinc-200">Suara terlihat</p><p className="mt-1 text-xs leading-5 text-zinc-600">disampaikan ke pemangku kebijakan</p></div><div className="border border-zinc-800 p-4"><ShieldCheck size={19} className="mb-4 text-[#ff6178]" /><p className="text-sm font-medium text-zinc-200">Terverifikasi</p><p className="mt-1 text-xs leading-5 text-zinc-600">satu warga, satu suara</p></div></div></div></article>
        <aside className="animate-rise animate-delay-2"><div className="sticky top-[96px] space-y-4"><div className="border border-[#ff304f]/50 bg-[#ff304f]/[.06] p-5 red-glow-strong"><div className="mb-4 flex items-center gap-2 text-[#ff6178]"><Clock3 size={16} /><span className="mono text-[9px] font-bold tracking-[.2em]">WAKTU TERSISA</span></div><Countdown end={end} /><p className="mt-4 text-xs leading-5 text-zinc-500">Kumpulkan dukungan sebelum momentum ini berakhir.</p></div><div className="border border-zinc-800 bg-zinc-900/50 p-5"><button onClick={vote} className={`flex h-12 w-full items-center justify-center gap-2 text-sm font-medium ${voted ? 'border border-[#ff304f] bg-[#ff304f]/10 text-[#ff6178]' : 'btn-primary'}`}><ThumbsUp size={17} fill={voted ? 'currentColor' : 'none'} /> {voted ? 'Kamu sudah mendukung' : 'Saya dukung isu ini'}</button>{issue.bisaDonasi ? <div className="mt-5 border-t border-zinc-800 pt-5"><div className="mb-2 flex items-end justify-between"><div><p className="mono text-[9px] uppercase tracking-widest text-zinc-600">penggalangan dana</p><p className="mt-1 text-lg font-medium text-zinc-100">{formatRupiah(issue.danaTerkumpul || 0)}</p><p className="text-[11px] text-zinc-600">dari {formatRupiah(issue.targetDana || 0)}</p></div><span className="mono text-sm text-[#ff6178]">{fundraisingProgress}%</span></div><div className="h-2 overflow-hidden bg-zinc-800"><div className="h-full bg-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)] transition-all duration-700" style={{ width: `${fundraisingProgress}%` }} /></div><button onClick={() => setDonate(true)} className="btn-primary mt-4 flex h-12 w-full items-center justify-center gap-2 text-sm font-medium shadow-[0_0_15px_rgba(220,38,38,0.5)]"><CircleDollarSign size={17} /> Donasi Gerakan</button></div> : <p className="mt-5 border-t border-zinc-800 pt-5 text-xs italic leading-5 text-zinc-500">Isu ini murni kebijakan publik pemerintah, tidak memerlukan penggalangan dana warga.</p>}<p className="mt-5 text-center text-[10px] leading-5 text-zinc-600">Dukunganmu tercatat secara anonim<br />dan tidak dapat diperjualbelikan.</p></div><div className="flex items-center justify-between px-1 text-xs text-zinc-600"><span className="flex items-center gap-1.5"><MessageSquare size={14} /> {formatNum(issue.comments)} komentar</span><button className="text-zinc-400 hover:text-[#ff6178]">Bagikan isu <ArrowRight className="ml-1 inline" size={13} /></button></div></div></aside>
-    </div>
-  </div>{donate && issue.bisaDonasi && <DonationModal onClose={() => setDonate(false)} onDonate={donateToIssue} />}</Shell>;
+     </div>
+     <Discussion issueId={issue.id} />
+   </div>{donate && issue.bisaDonasi && <DonationModal onClose={() => setDonate(false)} onDonate={donateToIssue} />}</Shell>;
 }
 
 function PaymentSuccess() {

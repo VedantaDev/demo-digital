@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: comments
+    description: Issue discussion operations
 paths:
   /healthz:
     get:
@@ -24,6 +26,51 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /comments:
+    get:
+      operationId: getIssueComments
+      tags: [comments]
+      summary: List comments for an issue
+      parameters:
+        - name: issue_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Comments ordered from oldest to newest
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Comment"
+        "400":
+          description: Missing issue id
+        "502":
+          description: Comment service unavailable
+    post:
+      operationId: createIssueComment
+      tags: [comments]
+      summary: Add a comment and generate a simulated netizen reply
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateComment"
+      responses:
+        "201":
+          description: User comment and optional fake netizen reply
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommentCreateResponse"
+        "400":
+          description: Invalid comment
+        "502":
+          description: Comment service unavailable
 components:
   schemas:
     HealthStatus:
@@ -33,4 +80,50 @@ components:
           type: string
       required:
         - status
+    Comment:
+      type: object
+      properties:
+        id:
+          type: string
+        issue_id:
+          type: string
+        author:
+          type: string
+        content:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - issue_id
+        - author
+        - content
+    CreateComment:
+      type: object
+      properties:
+        issue_id:
+          type: string
+        author:
+          type: string
+        content:
+          type: string
+          maxLength: 1000
+      required:
+        - issue_id
+        - author
+        - content
+    CommentCreateResponse:
+      type: object
+      properties:
+        comment:
+          $ref: "#/components/schemas/Comment"
+        botComment:
+          anyOf:
+            - $ref: "#/components/schemas/Comment"
+            - type: "null"
+        warning:
+          type: string
+      required:
+        - comment
+        - botComment
 
