@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { Dispatch, FormEvent, ReactNode, SetStateAction } from 'react';
+import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import { Link, Route, Switch, useLocation, useParams, Router as WouterRouter } from 'wouter';
+import Tesseract from 'tesseract.js';
 import { isValidNIK } from './utils/validateNik';
 import {
-  ArrowLeft, ArrowRight, BadgeCheck, Bell, Check, ChevronRight, CircleDollarSign,
+  ArrowLeft, ArrowRight, BadgeCheck, Check, ChevronRight, CircleDollarSign,
   Clock3, Compass, Heart, Home, Landmark, LockKeyhole, LogOut, MessageSquare,
-  Plus, Radio, Search, ShieldCheck, Sparkles, ThumbsUp, Users, X, Zap,
+  Plus, Radio, RefreshCcw, ScanLine, Search, ShieldCheck, Sparkles, ThumbsUp,
+  Upload, Users, X, Zap,
 } from 'lucide-react';
 
 type Issue = {
@@ -30,21 +32,58 @@ function Logo({ compact = false }: { compact?: boolean }) {
 
 function Login() {
   const [, setLocation] = useLocation();
-  const [nik, setNik] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageUrl, setImageUrl] = useState('');
+  const [scanState, setScanState] = useState<'upload' | 'preview' | 'scanning' | 'success' | 'error'>('upload');
+  const [extractedNik, setExtractedNik] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const submit = (e: FormEvent) => {
-    e.preventDefault(); setError('');
-    const validation = isValidNIK(nik);
-    if (!validation.valid) { setError(validation.message); return; }
-    setLoading(true); setTimeout(() => { setLocation('/beranda'); }, 650);
+  const [wibTime, setWibTime] = useState('');
+
+  useEffect(() => {
+    const updateClock = () => setWibTime(new Intl.DateTimeFormat('id-ID', {
+      timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+    }).format(new Date()));
+    updateClock();
+    const timer = window.setInterval(updateClock, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    return () => { if (imageUrl) URL.revokeObjectURL(imageUrl); };
+  }, [imageUrl]);
+
+  const resetScanner = () => {
+    setImageFile(null); setImageUrl(''); setScanState('upload'); setExtractedNik(''); setError('');
   };
+
+  const handleFile = (file?: File) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { setError('Pilih file gambar untuk memindai KTP.'); setScanState('error'); return; }
+    setImageFile(file); setImageUrl(URL.createObjectURL(file)); setScanState('preview'); setExtractedNik(''); setError('');
+  };
+
+  const scanIdentity = async () => {
+    if (!imageFile) return;
+    setScanState('scanning'); setError('');
+    try {
+      const { data: { text } } = await Tesseract.recognize(imageFile, 'ind+eng');
+      const match = text.match(/\b\d{16}\b/);
+      if (!match) { setScanState('error'); setError('Sistem tidak dapat menemukan NIK. Pastikan foto terang dan jelas.'); return; }
+      const validation = isValidNIK(match[0]);
+      if (!validation.valid) { setScanState('error'); setError('Sistem tidak dapat menemukan NIK. Pastikan foto terang dan jelas.'); return; }
+      setExtractedNik(match[0]); setScanState('success');
+      window.setTimeout(() => setLocation('/beranda'), 2000);
+    } catch {
+      setScanState('error'); setError('Pemindaian gagal. Coba gunakan foto KTP yang lebih terang dan jelas.');
+    }
+  };
+
   return <div className="noise relative min-h-[100dvh] overflow-hidden bg-zinc-950">
     <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(9,9,11,.98)_0%,rgba(9,9,11,.82)_45%,rgba(9,9,11,.62)_100%)] z-10" />
     <img src={`${ASSET_BASE}hero.jpg`} alt="" className="absolute inset-0 h-full w-full object-cover object-center opacity-55" />
     <div className="scanline" />
     <div className="relative z-20 mx-auto flex min-h-[100dvh] w-full max-w-[1440px] flex-col justify-between px-6 py-7 md:px-12 md:py-9">
-      <header className="flex items-center justify-between"><Logo /><div className="mono text-[10px] uppercase tracking-[.25em] text-zinc-500"><span className="mr-2 inline-block h-1.5 w-1.5 rounded-full bg-[#ff304f] shadow-[0_0_10px_#ff304f]" />sistem aktif / 2025</div></header>
+      <header className="flex items-center justify-between"><Logo /><div className="mono text-[10px] uppercase tracking-[.25em] text-zinc-500"><span className="mr-2 inline-block h-1.5 w-1.5 rounded-full bg-[#ff304f] shadow-[0_0_10px_#ff304f]" />sistem aktif / {wibTime || '--:--:--'} WIB</div></header>
       <main className="grid items-center gap-14 py-12 md:grid-cols-[minmax(0,580px)_1fr] md:gap-20">
         <section className="animate-rise">
           <div className="mb-7 flex items-center gap-3 text-[#ff6178]"><div className="h-px w-10 bg-[#ff304f]" /><span className="mono text-[10px] font-bold uppercase tracking-[.27em]">suara warga, daya nyata</span></div>
@@ -54,12 +93,11 @@ function Login() {
         </section>
         <section className="animate-rise animate-delay-2 w-full max-w-md justify-self-end">
           <div className="border border-zinc-800 bg-zinc-950/85 p-6 backdrop-blur-xl red-glow md:p-8">
-            <div className="mb-8 flex items-start justify-between"><div><p className="mono mb-2 text-[10px] uppercase tracking-[.22em] text-zinc-500">akses warga</p><h2 className="text-2xl font-medium tracking-tight">Masuk ke Demo Digital</h2></div><div className="flex h-9 w-9 items-center justify-center border border-[#ff304f]/40 text-[#ff304f]"><LockKeyhole size={16} /></div></div>
-            <form onSubmit={submit} className="space-y-5">
-              <label className="block"><span className="mb-2 block text-sm text-zinc-300">Nomor Induk Kependudukan</span><input value={nik} onChange={e => { setNik(e.target.value.replace(/\D/g, '').slice(0, 16)); setError(''); }} inputMode="numeric" maxLength={16} placeholder="Masukkan 16 digit NIK" className="field mono h-12 w-full px-4 text-sm tracking-[.18em]" /><span className="mt-2 block text-[11px] text-zinc-600">Data kamu aman dan hanya digunakan untuk verifikasi.</span></label>
-              {error && <div className="border border-[#ff304f]/40 bg-[#ff304f]/10 px-3 py-2.5 text-sm text-[#ff8495]">{error}</div>}
-              <button disabled={loading} className="btn-primary flex h-12 w-full items-center justify-center gap-3 text-sm font-semibold disabled:opacity-70">{loading ? 'Memverifikasi...' : <>Masuk ke ruang isu <ArrowRight size={16} /></>}</button>
-            </form>
+            <div className="mb-8 flex items-start justify-between"><div><p className="mono mb-2 text-[10px] uppercase tracking-[.22em] text-zinc-500">akses warga / scanner OCR</p><h2 className="text-2xl font-medium tracking-tight">Verifikasi identitas</h2></div><div className="flex h-9 w-9 items-center justify-center border border-[#ff304f]/40 text-[#ff304f]"><ScanLine size={17} /></div></div>
+            {!imageUrl ? <label className="group flex min-h-[218px] cursor-pointer flex-col items-center justify-center border border-dashed border-zinc-700 bg-zinc-900/40 px-5 text-center transition hover:border-[#ff304f]/70 hover:bg-[#ff304f]/[.04]"><input type="file" accept="image/*" className="sr-only" onChange={e => handleFile(e.target.files?.[0])} /><Upload size={28} className="mb-4 text-[#ff6178] transition group-hover:scale-110" /><span className="text-sm font-medium text-zinc-200">Unggah Foto KTP untuk Verifikasi</span><span className="mt-2 text-[11px] leading-5 text-zinc-600">Gunakan foto yang terang, fokus, dan seluruh teks terlihat.</span></label> : <div className="space-y-4"><div className="relative overflow-hidden border border-zinc-700 bg-black"><img src={imageUrl} alt="Pratinjau foto KTP" className="max-h-[250px] w-full object-contain" />{scanState === 'scanning' && <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/75 backdrop-blur-sm"><div className="mb-3 h-9 w-9 animate-spin rounded-full border-2 border-zinc-600 border-t-[#ff304f]" /><p className="text-sm text-zinc-200">Menganalisis dokumen OCR...</p></div>}</div><div className="flex gap-3"><button type="button" onClick={resetScanner} disabled={scanState === 'scanning' || scanState === 'success'} className="btn-quiet flex h-11 flex-1 items-center justify-center gap-2 text-sm disabled:opacity-40"><RefreshCcw size={15} /> Ganti Foto</button><button type="button" onClick={scanIdentity} disabled={scanState === 'scanning' || scanState === 'success'} className="btn-primary flex h-11 flex-1 items-center justify-center gap-2 text-sm font-semibold disabled:opacity-50">{scanState === 'scanning' ? 'Memindai...' : <><ScanLine size={16} /> Scan Identitas</>}</button></div></div>}
+            {scanState === 'success' && <div className="mt-4 border border-emerald-500/40 bg-emerald-500/10 px-3 py-3 text-sm text-emerald-300">Identitas Terverifikasi: <strong className="mono">{extractedNik}</strong><span className="mt-1 block text-[11px] text-emerald-400/70">Mengalihkan ke ruang isu...</span></div>}
+            {scanState === 'error' && error && <div className="mt-4 border border-[#ff304f]/40 bg-[#ff304f]/10 px-3 py-3 text-sm text-[#ff8495]">{error}</div>}
+            <p className="mt-5 flex items-start gap-2 text-[11px] leading-5 text-zinc-600"><LockKeyhole size={13} className="mt-0.5 shrink-0" /> Foto diproses sementara di perangkat ini untuk membaca nomor identitas.</p>
             <div className="mt-8 border-t border-zinc-800 pt-5 text-center"><p className="text-[11px] leading-5 text-zinc-600">Dengan masuk, kamu menyetujui <span className="text-zinc-400">panduan komunitas</span> Demo Digital.</p></div>
           </div>
         </section>
@@ -83,7 +121,7 @@ function Shell({ children, issuesCount }: { children: ReactNode; issuesCount: nu
       <div className="mt-14"><p className="mono mb-4 px-3 text-[9px] uppercase tracking-[.22em] text-zinc-600">ruang kamu</p><SideNav /></div>
       <div className="mt-auto"><div className="mb-6 border border-zinc-800 bg-zinc-900/70 p-3"><div className="mb-3 flex items-center gap-2 text-[#ff6178]"><Radio size={14} /><span className="mono text-[9px] uppercase tracking-widest">siaran langsung</span></div><p className="text-xs leading-5 text-zinc-400">{formatNum(issuesCount * 138)} warga sedang bergerak.</p><div className="mt-3 h-1 bg-zinc-800"><div className="h-full w-[68%] bg-[#ff304f]" /></div></div><button onClick={() => setLocation('/')} className="flex w-full items-center gap-3 px-3 py-3 text-sm text-zinc-600 transition hover:text-zinc-300"><LogOut size={16} /> Keluar</button></div>
     </aside>
-      <div className="md:pl-[224px]"><header className="sticky top-0 z-20 flex h-[72px] items-center justify-between border-b border-zinc-800/80 bg-zinc-950/90 px-5 backdrop-blur-xl md:px-10"><div className="flex items-center gap-3 md:hidden"><Logo compact /></div><div className="hidden items-center gap-2 text-sm text-zinc-500 md:flex"><span className="text-zinc-300">Selamat datang kembali</span><span>/</span><span>Jumat, 24 Mei 2025</span></div><div className="ml-auto flex items-center gap-5"><button className="relative text-zinc-500 transition hover:text-zinc-100"><Bell size={18} /><span className="absolute -right-1 -top-1 h-1.5 w-1.5 rounded-full bg-[#ff304f]" /></button><div className="hidden h-5 w-px bg-zinc-800 sm:block" /><button className="flex items-center gap-2 text-left"><img src={`${ASSET_BASE}avatar.png`} alt="Profil warga" className="h-8 w-8 rounded-full border border-[#ff304f]/60 object-cover" /><span className="hidden text-xs text-zinc-300 sm:block">Warga terverifikasi</span></button></div></header><main className="pb-24 md:pb-10">{children}</main></div>
+      <div className="md:pl-[224px]"><header className="sticky top-0 z-20 flex h-[72px] items-center justify-between border-b border-zinc-800/80 bg-zinc-950/90 px-5 backdrop-blur-xl md:px-10"><div className="flex items-center gap-3 md:hidden"><Logo compact /></div><div className="hidden items-center gap-2 text-sm text-zinc-500 md:flex"><span className="text-zinc-300">Selamat datang kembali</span><span>/</span><span>Jumat, 24 Mei 2025</span></div><div className="ml-auto flex items-center gap-5"><div className="hidden h-5 w-px bg-zinc-800 sm:block" /><button className="flex items-center gap-2 text-left"><img src={`${ASSET_BASE}avatar.png`} alt="Profil warga" className="h-8 w-8 rounded-full border border-[#ff304f]/60 object-cover" /><span className="hidden text-xs text-zinc-300 sm:block">Warga terverifikasi</span></button></div></header><main className="pb-24 md:pb-10">{children}</main></div>
     <div className="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-800 bg-zinc-950/95 px-4 pb-1 backdrop-blur-xl md:hidden"><SideNav mobile /></div>
   </div>;
 }
