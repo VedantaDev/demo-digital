@@ -13,6 +13,17 @@ const fakeReplies = [
 const readText = (value: unknown) =>
   typeof value === "string" ? value.trim() : "";
 
+const buildCommentRow = (
+  issueId: string,
+  author: string,
+  content: string,
+) => ({
+  issue_id: issueId,
+  "issue.id": issueId,
+  author,
+  content,
+});
+
 router.get("/comments", async (req, res) => {
   const issueId = readText(req.query["issue_id"]);
 
@@ -64,7 +75,7 @@ router.post("/comments", async (req, res) => {
     const supabase = getSupabaseClient();
     const { data: userComment, error: userCommentError } = await supabase
       .from("comments")
-      .insert({ issue_id: issueId, author, content })
+      .insert(buildCommentRow(issueId, author, content))
       .select()
       .single();
 
@@ -84,11 +95,7 @@ router.post("/comments", async (req, res) => {
       fakeReplies[Math.floor(Math.random() * fakeReplies.length)];
     const { data: botComment, error: botCommentError } = await supabase
       .from("comments")
-      .insert({
-        issue_id: issueId,
-        author: fakeAuthor,
-        content: fakeReply,
-      })
+      .insert(buildCommentRow(issueId, fakeAuthor, fakeReply))
       .select()
       .single();
 
