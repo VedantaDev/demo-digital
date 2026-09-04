@@ -3,6 +3,7 @@ import type { Dispatch, FormEvent, ReactNode, SetStateAction } from 'react';
 import { Link, Route, Switch, useLocation, useParams, Router as WouterRouter } from 'wouter';
 import Tesseract from 'tesseract.js';
 import { isValidNIK } from './utils/validateNik';
+import Verify from './pages/Verify';
 import {
   ArrowLeft, ArrowRight, BadgeCheck, Check, CheckCircle2, ChevronRight, CircleDollarSign,
   Clock3, Compass, Heart, Home, Landmark, Loader2, LockKeyhole, LogOut, MessageSquare,
@@ -109,7 +110,7 @@ function Login() {
 }
 
 function SideNav({ mobile = false }: { mobile?: boolean }) {
-  const items = [{ href: '/beranda', label: 'Beranda', icon: Home }, { href: '/beranda?filter=tren', label: 'Jelajahi isu', icon: Compass }, { href: '/beranda?filter=dukungan', label: 'Dukungan saya', icon: Heart }];
+  const items = [{ href: '/beranda', label: 'Beranda', icon: Home }, { href: '/beranda?filter=tren', label: 'Jelajahi isu', icon: Compass }, { href: '/beranda?filter=dukungan', label: 'Dukungan saya', icon: Heart }, { href: '/verify', label: 'Verifikasi identitas', icon: ShieldCheck }];
   return <nav className={mobile ? 'flex items-center justify-around' : 'space-y-1'}>{items.map(({ href, label, icon: Icon }) => <Link key={label} href={href} className={`group flex items-center ${mobile ? 'flex-col gap-1 px-3 py-2 text-[10px]' : 'gap-3 px-3 py-3 text-sm'} text-zinc-500 transition-colors hover:text-zinc-100`}><Icon size={mobile ? 18 : 17} strokeWidth={1.7} /><span>{label}</span></Link>)}</nav>;
 }
 
@@ -334,6 +335,11 @@ function PaymentSuccess() {
   return <div className="noise min-h-[100dvh] bg-zinc-950 px-5 py-8"><div className="mx-auto flex min-h-[calc(100dvh-4rem)] max-w-2xl flex-col items-center justify-center text-center"><Logo /><div className="animate-rise mt-16 flex h-20 w-20 items-center justify-center rounded-full border border-[#ff304f] bg-[#ff304f]/10 text-[#ff6178] red-glow-strong"><Check size={36} /></div><p className="mono mt-8 text-[10px] tracking-[.25em] text-[#ff6178]">DUKUNGAN DITERIMA</p><h1 className="mt-4 text-4xl font-semibold tracking-[-.05em] md:text-6xl">Suaramu sudah<br /><span className="text-[#ff304f]">ikut bergerak.</span></h1><p className="mt-6 max-w-md text-sm leading-6 text-zinc-500">Terima kasih sudah berdiri bersama warga lain. Kontribusimu membantu isu ini terus terdengar dan terlihat.</p><div className="mt-10 grid w-full max-w-sm grid-cols-2 border-y border-zinc-800 py-5 text-left"><div className="border-r border-zinc-800 px-5"><p className="mono text-[9px] uppercase tracking-widest text-zinc-600">status</p><p className="mt-2 flex items-center gap-2 text-sm text-[#ff6178]"><BadgeCheck size={15} /> berhasil</p></div><div className="px-5"><p className="mono text-[9px] uppercase tracking-widest text-zinc-600">ref</p><p className="mono mt-2 text-sm text-zinc-300">DD-7K2M91</p></div></div><button onClick={() => setLocation('/beranda')} className="btn-primary mt-10 flex items-center gap-2 px-6 py-3 text-sm font-medium">Kembali ke beranda <ArrowRight size={16} /></button><p className="mt-10 text-xs text-zinc-700">Setiap aksi kecil menciptakan tekanan besar.</p></div></div>;
 }
 
+function VerifyRoute() {
+  const [, setLocation] = useLocation();
+  return <Verify onBack={() => setLocation('/beranda')} />;
+}
+
 function NotFound() {
   const [, setLocation] = useLocation();
   return <div className="flex min-h-[100dvh] items-center justify-center bg-zinc-950 px-5 text-center"><div><p className="mono text-xs tracking-[.25em] text-[#ff304f]">404 / SINYAL HILANG</p><h1 className="mt-4 text-4xl font-semibold">Halaman tidak ditemukan.</h1><button onClick={() => setLocation('/beranda')} className="btn-primary mt-7 px-5 py-3 text-sm">Kembali ke beranda</button></div></div>;
@@ -341,7 +347,7 @@ function NotFound() {
 
 function RouterView() {
   const [issues, setIssues] = useState<Issue[]>(initialIssues);
-  return <Switch><Route path="/" component={Login} /><Route path="/beranda"><Beranda issues={issues} setIssues={setIssues} /></Route><Route path="/isu/:id"><Detail issues={issues} setIssues={setIssues} /></Route><Route path="/payment-success" component={PaymentSuccess} /><Route component={NotFound} /></Switch>;
+  return <Switch><Route path="/" component={Login} /><Route path="/beranda"><Beranda issues={issues} setIssues={setIssues} /></Route><Route path="/isu/:id"><Detail issues={issues} setIssues={setIssues} /></Route><Route path="/verify" component={VerifyRoute} /><Route path="/payment-success" component={PaymentSuccess} /><Route component={NotFound} /></Switch>;
 }
 
 export default function App() {
