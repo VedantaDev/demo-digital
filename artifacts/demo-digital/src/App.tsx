@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Dispatch, FormEvent, ReactNode, SetStateAction } from 'react';
 import { Link, Route, Switch, useLocation, useParams, Router as WouterRouter } from 'wouter';
-import Tesseract from 'tesseract.js';
-import { isValidNIK } from './utils/validateNik';
+import { scanKtpImage } from './utils/scanKtp';
 import Verify from './pages/Verify';
 import {
   ArrowLeft, ArrowRight, BadgeCheck, Check, CheckCircle2, ChevronRight, CircleDollarSign,
@@ -38,6 +37,9 @@ function Login() {
   const [imageUrl, setImageUrl] = useState('');
   const [scanState, setScanState] = useState<'upload' | 'preview' | 'scanning' | 'success' | 'error'>('upload');
   const [extractedNik, setExtractedNik] = useState('');
+  const [username, setUsername] = useState('');
+  const [extractedName, setExtractedName] = useState('');
+  const [ocrConfidence, setOcrConfidence] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [wibTime, setWibTime] = useState('');
 
@@ -55,28 +57,33 @@ function Login() {
   }, [imageUrl]);
 
   const resetScanner = () => {
-    setImageFile(null); setImageUrl(''); setScanState('upload'); setExtractedNik(''); setError('');
+    setImageFile(null); setImageUrl(''); setScanState('upload'); setExtractedNik('');
+    setUsername(''); setExtractedName(''); setOcrConfidence(null); setError('');
   };
 
   const handleFile = (file?: File) => {
     if (!file) return;
     if (!file.type.startsWith('image/')) { setError('Pilih file gambar untuk memindai KTP.'); setScanState('error'); return; }
-    setImageFile(file); setImageUrl(URL.createObjectURL(file)); setScanState('preview'); setExtractedNik(''); setError('');
+    setImageFile(file); setImageUrl(URL.createObjectURL(file)); setScanState('preview'); setExtractedNik('');
+    setExtractedName(''); setOcrConfidence(null); setError('');
   };
 
   const scanIdentity = async () => {
     if (!imageFile) return;
     setScanState('scanning'); setError('');
     try {
-      const { data: { text } } = await Tesseract.recognize(imageFile, 'ind+eng');
-      const match = text.match(/\b\d{16}\b/);
-      if (!match) { setScanState('error'); setError('Sistem tidak dapat menemukan NIK. Pastikan foto terang dan jelas.'); return; }
-      const validation = isValidNIK(match[0]);
-      if (!validation.valid) { setScanState('error'); setError('Sistem tidak dapat menemukan NIK. Pastikan foto terang dan jelas.'); return; }
-      setExtractedNik(match[0]); setScanState('success');
+      const result = await scanKtpImage(imageFile);
+      setExtractedNik(result.nik);
+      setExtractedName(result.name);
+      setOcrConfidence(result.confidence);
+      if (result.name) setUsername(result.name);
+      setScanState('success');
       window.setTimeout(() => setLocation('/beranda'), 2000);
-    } catch {
-      setScanState('error'); setError('Pemindaian gagal. Coba gunakan foto KTP yang lebih terang dan jelas.');
+    } catch (cause) {
+      setScanState('error');
+      setError(cause instanceof Error
+        ? `${cause.message} Coba atur posisi KTP lebih lurus atau gunakan foto yang lebih terang.`
+        : 'Pemindaian gagal. Coba gunakan foto KTP yang lebih terang dan jelas.');
     }
   };
 
@@ -96,8 +103,9 @@ function Login() {
         <section className="animate-rise animate-delay-2 w-full max-w-md justify-self-end">
           <div className="border border-zinc-800 bg-zinc-950/85 p-6 backdrop-blur-xl red-glow md:p-8">
             <div className="mb-8 flex items-start justify-between"><div><p className="mono mb-2 text-[10px] uppercase tracking-[.22em] text-zinc-500">akses warga / scanner OCR</p><h2 className="text-2xl font-medium tracking-tight">Verifikasi identitas</h2></div><div className="flex h-9 w-9 items-center justify-center border border-[#ff304f]/40 text-[#ff304f]"><ScanLine size={17} /></div></div>
-            {!imageUrl ? <label className="group flex min-h-[218px] cursor-pointer flex-col items-center justify-center border border-dashed border-zinc-700 bg-zinc-900/40 px-5 text-center transition hover:border-[#ff304f]/70 hover:bg-[#ff304f]/[.04]"><input type="file" accept="image/*" className="sr-only" onChange={e => handleFile(e.target.files?.[0])} /><Upload size={28} className="mb-4 text-[#ff6178] transition group-hover:scale-110" /><span className="text-sm font-medium text-zinc-200">Unggah Foto KTP untuk Verifikasi</span><span className="mt-2 text-[11px] leading-5 text-zinc-600">Gunakan foto yang terang, fokus, dan seluruh teks terlihat.</span></label> : <div className="space-y-4"><div className="relative overflow-hidden border border-zinc-700 bg-black"><img src={imageUrl} alt="Pratinjau foto KTP" className="max-h-[250px] w-full object-contain" />{scanState === 'scanning' && <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/75 backdrop-blur-sm"><div className="mb-3 h-9 w-9 animate-spin rounded-full border-2 border-zinc-600 border-t-[#ff304f]" /><p className="text-sm text-zinc-200">Menganalisis dokumen OCR...</p></div>}</div><div className="flex gap-3"><button type="button" onClick={resetScanner} disabled={scanState === 'scanning' || scanState === 'success'} className="btn-quiet flex h-11 flex-1 items-center justify-center gap-2 text-sm disabled:opacity-40"><RefreshCcw size={15} /> Ganti Foto</button><button type="button" onClick={scanIdentity} disabled={scanState === 'scanning' || scanState === 'success'} className="btn-primary flex h-11 flex-1 items-center justify-center gap-2 text-sm font-semibold disabled:opacity-50">{scanState === 'scanning' ? 'Memindai...' : <><ScanLine size={16} /> Scan Identitas</>}</button></div></div>}
-            {scanState === 'success' && <div className="mt-4 border border-emerald-500/40 bg-emerald-500/10 px-3 py-3 text-sm text-emerald-300">Identitas Terverifikasi: <strong className="mono">{extractedNik}</strong><span className="mt-1 block text-[11px] text-emerald-400/70">Mengalihkan ke ruang isu...</span></div>}
+             <label className="mb-5 block"><span className="mb-2 block text-xs text-zinc-400">Nama pengguna</span><input value={username} onChange={event => setUsername(event.target.value)} placeholder="Akan diisi dari nama pada KTP" className="field h-11 w-full px-3 text-sm" autoComplete="name" data-testid="input-nama-pengguna" />{extractedName && <span className="mt-2 block text-[10px] text-emerald-400/80">Nama terdeteksi dari hasil OCR dan masih bisa kamu edit.</span>}</label>
+             {!imageUrl ? <label className="group flex min-h-[218px] cursor-pointer flex-col items-center justify-center border border-dashed border-zinc-700 bg-zinc-900/40 px-5 text-center transition hover:border-[#ff304f]/70 hover:bg-[#ff304f]/[.04]"><input type="file" accept="image/*" className="sr-only" onChange={e => handleFile(e.target.files?.[0])} /><Upload size={28} className="mb-4 text-[#ff6178] transition group-hover:scale-110" /><span className="text-sm font-medium text-zinc-200">Unggah Foto KTP untuk Verifikasi</span><span className="mt-2 text-[11px] leading-5 text-zinc-600">Sudut foto dan pencahayaan berbeda tetap bisa diproses.</span></label> : <div className="space-y-4"><div className="relative overflow-hidden border border-zinc-700 bg-black"><img src={imageUrl} alt="Pratinjau foto KTP" className="max-h-[250px] w-full object-contain" />{scanState === 'scanning' && <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/75 backdrop-blur-sm"><div className="mb-3 h-9 w-9 animate-spin rounded-full border-2 border-zinc-600 border-t-[#ff304f]" /><p className="text-sm text-zinc-200">Menganalisis dokumen OCR...</p></div>}</div><div className="flex gap-3"><button type="button" onClick={resetScanner} disabled={scanState === 'scanning' || scanState === 'success'} className="btn-quiet flex h-11 flex-1 items-center justify-center gap-2 text-sm disabled:opacity-40"><RefreshCcw size={15} /> Ganti Foto</button><button type="button" onClick={scanIdentity} disabled={scanState === 'scanning' || scanState === 'success'} className="btn-primary flex h-11 flex-1 items-center justify-center gap-2 text-sm font-semibold disabled:opacity-50">{scanState === 'scanning' ? 'Memindai...' : <><ScanLine size={16} /> Scan Identitas</>}</button></div></div>}
+             {scanState === 'success' && <div className="mt-4 border border-emerald-500/40 bg-emerald-500/10 px-3 py-3 text-sm text-emerald-300">Identitas Terverifikasi: <strong className="mono">{extractedNik}</strong>{extractedName && <span className="mt-1 block">Nama: <strong>{extractedName}</strong></span>}<span className="mt-1 block text-[11px] text-emerald-400/70">OCR {ocrConfidence ?? 0}% · mengalihkan ke ruang isu...</span></div>}
             {scanState === 'error' && error && <div className="mt-4 border border-[#ff304f]/40 bg-[#ff304f]/10 px-3 py-3 text-sm text-[#ff8495]">{error}</div>}
             <p className="mt-5 flex items-start gap-2 text-[11px] leading-5 text-zinc-600"><LockKeyhole size={13} className="mt-0.5 shrink-0" /> Foto diproses sementara di perangkat ini untuk membaca nomor identitas.</p>
             <div className="mt-8 border-t border-zinc-800 pt-5 text-center"><p className="text-[11px] leading-5 text-zinc-600">Dengan masuk, kamu menyetujui <span className="text-zinc-400">panduan komunitas</span> Demo Digital.</p></div>
