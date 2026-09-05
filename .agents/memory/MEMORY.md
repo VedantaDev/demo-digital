@@ -1,1 +1,2 @@
 - [API contract generator quirks](api-contract-quirks.md) — OpenAPI email formats can generate unsupported Zod helpers; verify codegen against the workspace runtime.
+- [Navigation query quirks](navigation-query-quirks.md) — Same-page modal actions need callbacks; query-string entry is only a fallback for cross-route navigation.

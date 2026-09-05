@@ -6,7 +6,7 @@ import { setValidatedKtp } from './utils/verificationSession';
 import Verify from './pages/Verify';
 import {
   ArrowLeft, ArrowRight, BadgeCheck, Check, CheckCircle2, ChevronRight, CircleDollarSign,
-  Clock3, Compass, Heart, Home, Landmark, Loader2, LockKeyhole, LogOut, MessageSquare,
+  ArrowUpRight, Clock3, Home, Landmark, Loader2, LockKeyhole, LogOut, MessageSquare,
   Plus, Radio, RefreshCcw, ScanLine, Search, Send, ShieldCheck, Sparkles, ThumbsUp,
   Upload, Users, X, Zap,
 } from 'lucide-react';
@@ -185,22 +185,51 @@ function Login() {
   </div>;
 }
 
-function SideNav({ mobile = false }: { mobile?: boolean }) {
-  const items = [{ href: '/beranda', label: 'Beranda', icon: Home }, { href: '/beranda?filter=tren', label: 'Jelajahi isu', icon: Compass }, { href: '/beranda?filter=dukungan', label: 'Dukungan saya', icon: Heart }, { href: '/verify', label: 'Verifikasi identitas', icon: ShieldCheck }];
-  return <nav className={mobile ? 'flex items-center justify-around' : 'space-y-1'}>{items.map(({ href, label, icon: Icon }) => <Link key={label} href={href} className={`group flex items-center ${mobile ? 'flex-col gap-1 px-3 py-2 text-[10px]' : 'gap-3 px-3 py-3 text-sm'} text-zinc-500 transition-colors hover:text-zinc-100`}><Icon size={mobile ? 18 : 17} strokeWidth={1.7} /><span>{label}</span></Link>)}</nav>;
+function SideNav({ mobile = false, onOpenIssue }: { mobile?: boolean; onOpenIssue?: () => void }) {
+  const items = [
+    { href: '/beranda', label: 'Beranda', icon: Home },
+    { href: '/beranda?open=ajukan', label: 'Ajukan isu', icon: Plus },
+    { href: 'https://www.youtube.com/live/rQJoEpzKkNk?si=qZn4lVsJrrzRQ1OG', label: 'Lihat siaran live', icon: Radio, external: true },
+    { href: '/verify', label: 'Verifikasi identitas', icon: ShieldCheck },
+  ];
+  return <nav className={mobile ? 'flex items-center justify-around' : 'space-y-1'}>{items.map(({ href, label, icon: Icon, external }) => {
+    const className = `group flex items-center ${mobile ? 'flex-col gap-1 px-3 py-2 text-[10px]' : 'gap-3 px-3 py-3 text-sm'} text-zinc-500 transition-colors hover:text-zinc-100`;
+    if (label === 'Ajukan isu' && onOpenIssue) {
+      return <button key={label} type="button" onClick={onOpenIssue} className={className}><Icon size={mobile ? 18 : 17} strokeWidth={1.7} /><span>{label}</span></button>;
+    }
+    if (external) {
+      return <a key={label} href={href} target="_blank" rel="noreferrer" className={className}><Icon size={mobile ? 18 : 17} strokeWidth={1.7} /><span>{label}</span></a>;
+    }
+    return <Link key={label} href={href} className={className}><Icon size={mobile ? 18 : 17} strokeWidth={1.7} /><span>{label}</span></Link>;
+  })}</nav>;
 }
 
-function Shell({ children, issuesCount }: { children: ReactNode; issuesCount: number }) {
+function Shell({ children, onOpenIssue }: { children: ReactNode; onOpenIssue?: () => void }) {
   const [, setLocation] = useLocation();
+  const [wibTime, setWibTime] = useState('');
+
+  useEffect(() => {
+    const updateClock = () => setWibTime(new Intl.DateTimeFormat('id-ID', {
+      timeZone: 'Asia/Jakarta',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).format(new Date()));
+    updateClock();
+    const timer = window.setInterval(updateClock, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   return <div className="noise min-h-[100dvh] bg-zinc-950">
     <div className="scanline" />
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-[224px] border-r border-zinc-800/80 bg-zinc-950 md:flex md:flex-col md:px-5 md:py-7">
       <Logo />
-      <div className="mt-14"><p className="mono mb-4 px-3 text-[9px] uppercase tracking-[.22em] text-zinc-600">ruang kamu</p><SideNav /></div>
-      <div className="mt-auto"><div className="mb-6 border border-zinc-800 bg-zinc-900/70 p-3"><div className="mb-3 flex items-center gap-2 text-[#ff6178]"><Radio size={14} /><span className="mono text-[9px] uppercase tracking-widest">siaran langsung</span></div><p className="text-xs leading-5 text-zinc-400">{formatNum(issuesCount * 138)} warga sedang bergerak.</p><div className="mt-3 h-1 bg-zinc-800"><div className="h-full w-[68%] bg-[#ff304f]" /></div></div><button onClick={() => setLocation('/')} className="flex w-full items-center gap-3 px-3 py-3 text-sm text-zinc-600 transition hover:text-zinc-300"><LogOut size={16} /> Keluar</button></div>
+      <div className="mt-14"><p className="mono mb-4 px-3 text-[9px] uppercase tracking-[.22em] text-zinc-600">ruang kamu</p><SideNav onOpenIssue={onOpenIssue} /></div>
+      <div className="mt-auto"><a href="https://www.youtube.com/live/rQJoEpzKkNk?si=qZn4lVsJrrzRQ1OG" target="_blank" rel="noreferrer" className="mb-6 block border border-zinc-800 bg-zinc-900/70 p-3 transition hover:border-[#ff304f]/60 hover:bg-zinc-900"><div className="mb-3 flex items-center justify-between gap-2 text-[#ff6178]"><div className="flex items-center gap-2"><Radio size={14} /><span className="mono text-[9px] uppercase tracking-widest">siaran langsung</span></div><ArrowUpRight size={14} /></div><p className="text-xs leading-5 text-zinc-300">Berita terkini dalam siaran langsung.</p><span className="mono mt-3 inline-flex items-center gap-1 text-[9px] uppercase tracking-[.15em] text-zinc-500">Buka YouTube Live <ChevronRight size={12} /></span></a><button onClick={() => setLocation('/')} className="flex w-full items-center gap-3 px-3 py-3 text-sm text-zinc-600 transition hover:text-zinc-300"><LogOut size={16} /> Keluar</button></div>
     </aside>
-      <div className="md:pl-[224px]"><header className="sticky top-0 z-20 flex h-[72px] items-center justify-between border-b border-zinc-800/80 bg-zinc-950/90 px-5 backdrop-blur-xl md:px-10"><div className="flex items-center gap-3 md:hidden"><Logo compact /></div><div className="hidden items-center gap-2 text-sm text-zinc-500 md:flex"><span className="text-zinc-300">Selamat datang kembali</span><span>/</span><span>Jumat, 24 Mei 2025</span></div><div className="ml-auto flex items-center gap-5"><div className="hidden h-5 w-px bg-zinc-800 sm:block" /><button className="flex items-center gap-2 text-left"><img src={`${ASSET_BASE}avatar.png`} alt="Profil warga" className="h-8 w-8 rounded-full border border-[#ff304f]/60 object-cover" /><span className="hidden text-xs text-zinc-300 sm:block">Warga terverifikasi</span></button></div></header><main className="pb-24 md:pb-10">{children}</main></div>
-    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-800 bg-zinc-950/95 px-4 pb-1 backdrop-blur-xl md:hidden"><SideNav mobile /></div>
+       <div className="md:pl-[224px]"><header className="sticky top-0 z-20 flex h-[72px] items-center justify-between border-b border-zinc-800/80 bg-zinc-950/90 px-5 backdrop-blur-xl md:px-10"><div className="flex items-center gap-3 md:hidden"><Logo compact /></div><div className="hidden items-center gap-2 text-sm text-zinc-500 md:flex"><span className="text-zinc-300">Selamat datang kembali</span><span>/</span><span className="mono text-[#ff6178]">LIVE WIB / {wibTime || '--:--:--'}</span></div><div className="ml-auto flex items-center gap-5"><div className="hidden h-5 w-px bg-zinc-800 sm:block" /><button className="flex items-center gap-2 text-left"><img src={`${ASSET_BASE}avatar.png`} alt="Profil warga" className="h-8 w-8 rounded-full border border-[#ff304f]/60 object-cover" /><span className="hidden text-xs text-zinc-300 sm:block">Warga terverifikasi</span></button></div></header><main className="pb-24 md:pb-10">{children}</main></div>
+     <div className="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-800 bg-zinc-950/95 px-4 pb-1 backdrop-blur-xl md:hidden"><SideNav mobile onOpenIssue={onOpenIssue} /></div>
   </div>;
 }
 
@@ -214,7 +243,7 @@ function IssueCard({ issue, voted, onVote }: { issue: Issue; voted: boolean; onV
     <div className="flex items-start justify-between gap-4"><div className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#ff304f]" /><span className="mono text-[9px] font-bold tracking-[.18em] text-[#ff6178]">{issue.category}</span>{issue.hot && <span className="border border-[#ff304f]/30 px-1.5 py-0.5 text-[9px] text-[#ff8495]">RAMAI</span>}</div><span className="mono text-[10px] text-zinc-600">{issue.time}</span></div>
     <Link href={`/isu/${issue.id}`} className="block"><h3 className="mt-5 max-w-xl text-xl font-medium leading-tight tracking-tight text-zinc-100 transition-colors group-hover:text-[#ff8495] md:text-2xl">{issue.title}</h3><p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-500">{issue.description}</p></Link>
     <div className="mt-6"><div className="mb-2 flex justify-between text-[11px]"><span className="text-zinc-400"><strong className="font-medium text-zinc-200">{formatNum(issue.votes)}</strong> suara terkumpul</span><span className="mono text-zinc-600">{percentage}%</span></div><div className="h-1 bg-zinc-800"><div className="h-full bg-[#ff304f] transition-all duration-700" style={{ width: `${percentage}%` }} /></div></div>
-    <div className="mt-6 flex items-center justify-between border-t border-zinc-800/70 pt-4"><div className="flex items-center gap-4 text-xs text-zinc-600"><span className="flex items-center gap-1.5"><Users size={14} /> {formatNum(issue.supporters)}</span><span className="flex items-center gap-1.5"><MessageSquare size={14} /> {formatNum(issue.comments)}</span></div><button onClick={onVote} className={`flex items-center gap-2 px-3 py-2 text-xs font-medium transition ${voted ? 'border border-[#ff304f]/60 bg-[#ff304f]/10 text-[#ff6178]' : 'btn-quiet'}`}><ThumbsUp size={14} fill={voted ? 'currentColor' : 'none'} /> {voted ? 'Didukung' : 'Dukung isu'}</button></div>
+     <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-zinc-800/70 pt-4"><div className="flex items-center gap-4 text-xs text-zinc-600"><span className="flex items-center gap-1.5"><Users size={14} /> {formatNum(issue.supporters)}</span><span className="flex items-center gap-1.5"><MessageSquare size={14} /> {formatNum(issue.comments)}</span></div><div className="flex items-center gap-2">{issue.bisaDonasi && <Link href={`/isu/${issue.id}`} className="flex items-center gap-1.5 border border-[#ff6178]/40 bg-[#ff304f]/[.08] px-2.5 py-2 text-[10px] font-medium text-[#ff9aaa] transition hover:border-[#ff6178] hover:bg-[#ff304f]/[.16]" title="Buka ruang isu dan lihat penggalangan dana"><CircleDollarSign size={13} /> <span>Donasi tersedia</span></Link>}<button onClick={onVote} className={`flex items-center gap-2 px-3 py-2 text-xs font-medium transition ${voted ? 'border border-[#ff304f]/60 bg-[#ff304f]/10 text-[#ff6178]' : 'btn-quiet'}`}><ThumbsUp size={14} fill={voted ? 'currentColor' : 'none'} /> {voted ? 'Didukung' : 'Dukung isu'}</button></div></div>
   </article>;
 }
 
@@ -271,6 +300,11 @@ function Beranda({ issues, setIssues }: { issues: Issue[]; setIssues: Dispatch<S
     const timer = window.setInterval(() => setHeroSlide((current) => current === 0 ? 1 : 0), 3000);
     return () => window.clearInterval(timer);
   }, []);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('open') !== 'ajukan') return;
+    setModal(true);
+    window.history.replaceState({}, '', window.location.pathname);
+  }, []);
   const filtered = useMemo(() => issues.filter(i => `${i.title} ${i.description} ${i.category}`.toLowerCase().includes(search.toLowerCase())), [issues, search]);
   const vote = (id: string) => { if (voted.includes(id)) return; setVoted(v => [...v, id]); setIssues(all => all.map(i => i.id === id ? { ...i, votes: i.votes + 1, supporters: i.supporters + 1 } : i)); };
   const submitIssue = async (submission: IssueSubmission) => {
@@ -294,7 +328,7 @@ function Beranda({ issues, setIssues }: { issues: Issue[]; setIssues: Dispatch<S
     setModal(false);
     setToast(true);
   };
-  return <Shell issuesCount={issues.length}><div className="mx-auto max-w-[1200px] px-5 py-8 md:px-10 md:py-12">
+   return <Shell onOpenIssue={() => setModal(true)}><div className="mx-auto max-w-[1200px] px-5 py-8 md:px-10 md:py-12">
      <section className="animate-rise relative min-h-[310px] overflow-hidden border border-[#ff304f]/40 bg-zinc-900/50 red-glow">
        {heroSlide === 0 ? <div className="relative min-h-[310px] p-6 md:p-10"><img src={`${ASSET_BASE}hero-pecintakalah.jpeg`} alt="Aksi warga menyuarakan perubahan" className="absolute inset-0 h-full w-full object-cover object-center opacity-35" /><div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(9,9,11,.98)_0%,rgba(9,9,11,.78)_52%,rgba(9,9,11,.26)_100%)]" /><div className="relative max-w-2xl"><div className="mb-5 flex items-center gap-2 text-[#ff6178]"><Zap size={15} fill="currentColor" /><span className="mono text-[10px] font-bold uppercase tracking-[.24em]">pecintaKalah / ruang isu nasional</span></div><h1 className="text-4xl font-semibold tracking-[-.05em] md:text-6xl">Keresahanmu<br /><span className="text-[#ff304f]">punya tempat.</span></h1><p className="mt-5 max-w-lg text-sm leading-6 text-zinc-300 md:text-base">Baca. Pilih. Bergerak. Setiap dukungan menambah tekanan yang terlihat dan membuat perubahan tak bisa diabaikan.</p><button onClick={() => setModal(true)} className="btn-primary mt-7 flex items-center gap-2 px-5 py-3 text-sm font-medium"><Plus size={17} /> Ajukan isu</button></div><div className="absolute bottom-5 right-7 hidden text-right md:block"><p className="mono text-[9px] uppercase tracking-[.2em] text-zinc-400">sinyal warga</p><p className="mt-1 text-4xl font-medium text-zinc-100">+24.8K</p></div></div> : <div className="relative min-h-[310px] overflow-hidden p-6 md:p-10"><img src={`${ASSET_BASE}demoPictures.jpg`} alt="" className="absolute inset-0 h-full w-full object-cover object-center opacity-35" /><div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(9,9,11,.94)_0%,rgba(9,9,11,.72)_50%,rgba(9,9,11,.45)_100%)]" /><div className="relative z-10 flex min-h-[230px] flex-col justify-center"><div className="mb-5 flex items-center gap-2 text-[#ff6178]"><Clock3 size={15} /><span className="mono text-[10px] font-bold uppercase tracking-[.24em]">aksi demo nasional / hitung mundur</span></div><h2 className="max-w-xl text-4xl font-semibold tracking-[-.05em] md:text-6xl">Sembilan hari<br /><span className="text-[#ff304f]">untuk bergerak.</span></h2><p className="mt-4 max-w-lg text-sm leading-6 text-zinc-300">Satukan suara dan hadir dalam aksi yang menuntut perubahan nyata.</p><div className="mt-7"><Countdown end={actionEnd} /></div></div></div>}
       <button aria-label="Slide sebelumnya" onClick={() => setHeroSlide(s => s === 0 ? 1 : 0)} className="absolute bottom-5 left-1/2 flex -translate-x-1/2 gap-2" >{[0, 1].map(slide => <span key={slide} className={`h-1.5 transition-all ${heroSlide === slide ? 'w-8 bg-[#ff304f] shadow-[0_0_10px_#ff304f]' : 'w-3 bg-zinc-600'}`} />)}</button>
@@ -460,7 +494,7 @@ function Detail({ issues, setIssues }: { issues: Issue[]; setIssues: Dispatch<Se
   const vote = () => { if (voted) return; setVoted(true); setIssues(all => all.map(i => i.id === issue.id ? { ...i, votes: i.votes + 1, supporters: i.supporters + 1 } : i)); };
   const fundraisingProgress = issue.targetDana ? Math.min(100, Math.round(((issue.danaTerkumpul || 0) / issue.targetDana) * 100)) : 0;
   const donateToIssue = (amount: number) => setIssues(all => all.map(i => i.id === issue.id ? { ...i, danaTerkumpul: (i.danaTerkumpul || 0) + amount } : i));
-  return <Shell issuesCount={issues.length}><div className="mx-auto max-w-[1200px] px-5 py-8 md:px-10 md:py-12">
+  return <Shell><div className="mx-auto max-w-[1200px] px-5 py-8 md:px-10 md:py-12">
     <button onClick={() => setLocation('/beranda')} className="mb-9 flex items-center gap-2 text-sm text-zinc-500 transition hover:text-zinc-100"><ArrowLeft size={16} /> Kembali ke ruang isu</button>
     <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_340px]"><article className="animate-rise"><div className="mb-6 flex flex-wrap items-center gap-3"><span className="h-2 w-2 rounded-full bg-[#ff304f] shadow-[0_0_12px_#ff304f]" /><span className="mono text-[10px] tracking-[.22em] text-[#ff6178]">{issue.category}</span><span className="text-zinc-700">/</span><span className="text-xs text-zinc-600">ISU AKTIF</span></div><h1 className="max-w-3xl text-4xl font-semibold leading-[1.03] tracking-[-.05em] text-zinc-50 md:text-6xl">{issue.title}</h1><div className="mt-6 flex items-center gap-3 text-xs text-zinc-500"><img src={`${ASSET_BASE}avatar.png`} alt="" className="h-7 w-7 rounded-full object-cover" /><span>Diprakarsai oleh <strong className="font-medium text-zinc-300">{issue.author}</strong></span><span className="text-zinc-700">•</span><span>{issue.time}</span></div><div className="mt-10 border-l-2 border-[#ff304f] pl-5 text-base leading-8 text-zinc-300 md:text-lg">{issue.description}</div><div className="mt-10 border-y border-zinc-800 py-7"><div className="mb-3 flex items-end justify-between"><div><p className="mono text-[9px] uppercase tracking-widest text-zinc-600">batas dukungan</p><p className="mt-1 text-3xl font-medium">{formatNum(issue.votes)} <span className="text-base font-normal text-zinc-600">/ {formatNum(issue.target)} suara</span></p></div><span className="text-sm text-[#ff6178]">{Math.round((issue.votes / issue.target) * 100)}%</span></div><div className="h-2 bg-zinc-800"><div className="h-full bg-[#ff304f] shadow-[0_0_15px_rgba(255,48,79,.5)]" style={{ width: `${Math.min(100, issue.votes / issue.target * 100)}%` }} /></div></div><div className="mt-9"><h2 className="text-xl font-medium">Kenapa dukunganmu penting?</h2><div className="mt-5 grid gap-4 sm:grid-cols-3"><div className="border border-zinc-800 p-4"><Users size={19} className="mb-4 text-[#ff6178]" /><p className="text-sm font-medium text-zinc-200">{formatNum(issue.supporters)} warga</p><p className="mt-1 text-xs leading-5 text-zinc-600">sudah berdiri bersama</p></div><div className="border border-zinc-800 p-4"><Landmark size={19} className="mb-4 text-[#ff6178]" /><p className="text-sm font-medium text-zinc-200">Suara terlihat</p><p className="mt-1 text-xs leading-5 text-zinc-600">disampaikan ke pemangku kebijakan</p></div><div className="border border-zinc-800 p-4"><ShieldCheck size={19} className="mb-4 text-[#ff6178]" /><p className="text-sm font-medium text-zinc-200">Terverifikasi</p><p className="mt-1 text-xs leading-5 text-zinc-600">satu warga, satu suara</p></div></div></div></article>
        <aside className="animate-rise animate-delay-2"><div className="sticky top-[96px] space-y-4"><div className="border border-[#ff304f]/50 bg-[#ff304f]/[.06] p-5 red-glow-strong"><div className="mb-4 flex items-center gap-2 text-[#ff6178]"><Clock3 size={16} /><span className="mono text-[9px] font-bold tracking-[.2em]">WAKTU TERSISA</span></div><Countdown end={end} /><p className="mt-4 text-xs leading-5 text-zinc-500">Kumpulkan dukungan sebelum momentum ini berakhir.</p></div><div className="border border-zinc-800 bg-zinc-900/50 p-5"><button onClick={vote} className={`flex h-12 w-full items-center justify-center gap-2 text-sm font-medium ${voted ? 'border border-[#ff304f] bg-[#ff304f]/10 text-[#ff6178]' : 'btn-primary'}`}><ThumbsUp size={17} fill={voted ? 'currentColor' : 'none'} /> {voted ? 'Kamu sudah mendukung' : 'Saya dukung isu ini'}</button>{issue.bisaDonasi ? <div className="mt-5 border-t border-zinc-800 pt-5"><div className="mb-2 flex items-end justify-between"><div><p className="mono text-[9px] uppercase tracking-widest text-zinc-600">penggalangan dana</p><p className="mt-1 text-lg font-medium text-zinc-100">{formatRupiah(issue.danaTerkumpul || 0)}</p><p className="text-[11px] text-zinc-600">dari {formatRupiah(issue.targetDana || 0)}</p></div><span className="mono text-sm text-[#ff6178]">{fundraisingProgress}%</span></div><div className="h-2 overflow-hidden bg-zinc-800"><div className="h-full bg-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)] transition-all duration-700" style={{ width: `${fundraisingProgress}%` }} /></div><button onClick={() => setDonate(true)} className="btn-primary mt-4 flex h-12 w-full items-center justify-center gap-2 text-sm font-medium shadow-[0_0_15px_rgba(220,38,38,0.5)]"><CircleDollarSign size={17} /> Donasi Gerakan</button></div> : <p className="mt-5 border-t border-zinc-800 pt-5 text-xs italic leading-5 text-zinc-500">Isu ini murni kebijakan publik pemerintah, tidak memerlukan penggalangan dana warga.</p>}<p className="mt-5 text-center text-[10px] leading-5 text-zinc-600">Dukunganmu tercatat secara anonim<br />dan tidak dapat diperjualbelikan.</p></div><div className="flex items-center justify-between px-1 text-xs text-zinc-600"><span className="flex items-center gap-1.5"><MessageSquare size={14} /> {formatNum(issue.comments)} komentar</span><button className="text-zinc-400 hover:text-[#ff6178]">Bagikan isu <ArrowRight className="ml-1 inline" size={13} /></button></div></div></aside>
