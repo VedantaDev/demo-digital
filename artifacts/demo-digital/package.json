@@ -75,6 +75,7 @@
     "zod": "catalog:"
   },
   "dependencies": {
+    "@vladmandic/face-api": "^1.7.15",
     "tesseract.js": "^7.0.0"
   }
 }

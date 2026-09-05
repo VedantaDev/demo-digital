@@ -14,18 +14,15 @@ import {
   Upload,
   X,
 } from 'lucide-react';
+import { matchPreparedFaceToSelfie, prepareKtpFace } from '../utils/faceVerification';
+import { clearValidatedKtp, getValidatedKtp } from '../utils/verificationSession';
 
 type VerifyProps = {
   onBack?: () => void;
+  onSuccess?: () => void;
 };
 
 type VerificationStep = 1 | 2;
-
-const FAILURE_MESSAGES = [
-  'Verifikasi Gagal: Wajah pada KTP tidak cocok dengan foto selfie Anda.',
-  'Verifikasi Gagal: Foto KTP terlalu buram atau terkena pantulan cahaya (glare).',
-  'Verifikasi Gagal: Wajah tidak terdeteksi dengan jelas pada foto selfie.',
-] as const;
 
 function StepMarker({
   number,
@@ -57,9 +54,10 @@ function StepMarker({
   );
 }
 
-export default function Verify({ onBack }: VerifyProps) {
-  const [step, setStep] = useState<VerificationStep>(1);
-  const [ktpFile, setKtpFile] = useState<File | null>(null);
+export default function Verify({ onBack, onSuccess }: VerifyProps) {
+  const sessionKtp = getValidatedKtp();
+  const [step, setStep] = useState<VerificationStep>(sessionKtp.file ? 2 : 1);
+  const [ktpFile, setKtpFile] = useState<File | null>(sessionKtp.file);
   const [ktpUrl, setKtpUrl] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
@@ -76,6 +74,12 @@ export default function Verify({ onBack }: VerifyProps) {
   const streamRef = useRef<MediaStream | null>(null);
   const ktpUrlRef = useRef('');
   const selfieUrlRef = useRef('');
+  const initialCameraRequestedRef = useRef(false);
+  const ktpFaceDescriptorRef = useRef<Float32Array | null>(null);
+  const ktpFacePromiseRef = useRef<Promise<Float32Array> | null>(null);
+  const [ktpFaceState, setKtpFaceState] = useState<'idle' | 'loading' | 'ready' | 'error'>(
+    sessionKtp.file ? 'loading' : 'idle',
+  );
 
   const revokeKtpUrl = useCallback(() => {
     if (ktpUrlRef.current) {
@@ -115,24 +119,54 @@ export default function Verify({ onBack }: VerifyProps) {
   useEffect(() => {
     if (!processing) return;
 
-    const startedAt = performance.now();
     const interval = window.setInterval(() => {
-      setProcessProgress(Math.min(100, ((performance.now() - startedAt) / 3000) * 100));
-    }, 50);
-    const timeout = window.setTimeout(() => {
-      window.clearInterval(interval);
-      setProcessProgress(100);
-      setProcessing(false);
-      const message = FAILURE_MESSAGES[Math.floor(Math.random() * FAILURE_MESSAGES.length)];
-      setErrorMessage(message);
-      setErrorOpen(true);
-    }, 3000);
+      setProcessProgress((current) => Math.min(92, current + 1.8));
+    }, 100);
 
     return () => {
       window.clearInterval(interval);
-      window.clearTimeout(timeout);
     };
   }, [processing]);
+
+  useEffect(() => {
+    if (!ktpFile || ktpUrl) return;
+    const nextUrl = URL.createObjectURL(ktpFile);
+    ktpUrlRef.current = nextUrl;
+    setKtpUrl(nextUrl);
+    return () => {
+      URL.revokeObjectURL(nextUrl);
+      if (ktpUrlRef.current === nextUrl) ktpUrlRef.current = '';
+    };
+  }, [ktpFile, ktpUrl]);
+
+  useEffect(() => {
+    if (!ktpFile) {
+      ktpFaceDescriptorRef.current = null;
+      ktpFacePromiseRef.current = null;
+      setKtpFaceState('idle');
+      return;
+    }
+
+    let active = true;
+    setKtpFaceState('loading');
+    const promise = prepareKtpFace(ktpFile);
+    ktpFacePromiseRef.current = promise;
+    void promise
+      .then((descriptor) => {
+        if (!active) return;
+        ktpFaceDescriptorRef.current = descriptor;
+        setKtpFaceState('ready');
+      })
+      .catch(() => {
+        if (!active) return;
+        ktpFaceDescriptorRef.current = null;
+        setKtpFaceState('error');
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [ktpFile]);
 
   const clearSelfie = useCallback(() => {
     revokeSelfieUrl();
@@ -190,6 +224,12 @@ export default function Verify({ onBack }: VerifyProps) {
     }
   }, [stopCamera]);
 
+  useEffect(() => {
+    if (!sessionKtp.file || !ktpFile || step !== 2 || initialCameraRequestedRef.current) return;
+    initialCameraRequestedRef.current = true;
+    void requestCamera();
+  }, [ktpFile, requestCamera, sessionKtp.file, step]);
+
   const openCamera = () => {
     if (!ktpFile) return;
     setStep(2);
@@ -235,11 +275,40 @@ export default function Verify({ onBack }: VerifyProps) {
     }, 'image/jpeg', 0.88);
   };
 
-  const startProcessing = () => {
-    if (!selfieUrl || processing) return;
+  const startProcessing = async () => {
+    if (!selfieUrl || !ktpFile || processing) return;
     setErrorOpen(false);
     setProcessProgress(0);
     setProcessing(true);
+
+    try {
+      const selfieBlob = await fetch(selfieUrl).then((response) => response.blob());
+      const ktpDescriptor = ktpFaceDescriptorRef.current
+        ?? await (ktpFacePromiseRef.current ?? prepareKtpFace(ktpFile));
+      const result = await matchPreparedFaceToSelfie(ktpDescriptor, selfieBlob);
+      setProcessProgress(100);
+      setProcessing(false);
+
+      if (result.matched) {
+        clearValidatedKtp();
+        window.setTimeout(() => onSuccess?.(), 350);
+        return;
+      }
+
+      setErrorMessage('Wajah tidak cocok. Pastikan pencahayaan terang dan lepas kacamata atau masker, lalu coba ambil foto ulang.');
+      setErrorOpen(true);
+    } catch (error) {
+      setProcessing(false);
+      setProcessProgress(100);
+      const message = error instanceof Error ? error.message : '';
+      const userMessage = message === 'FACE_KTP_NOT_FOUND'
+        ? 'Wajah pada KTP tidak terdeteksi. Gunakan foto KTP yang lebih tajam dan tidak tertutup pantulan cahaya.'
+        : message === 'FACE_SELFIE_NOT_FOUND'
+          ? 'Wajah tidak terdeteksi. Pastikan wajah berada di dalam oval dan pencahayaan menghadap ke wajah.'
+          : 'Verifikasi wajah belum dapat diproses. Pastikan kamera dan foto KTP dapat dibaca, lalu coba lagi.';
+      setErrorMessage(userMessage);
+      setErrorOpen(true);
+    }
   };
 
   const retrySelfie = () => {
@@ -434,6 +503,23 @@ export default function Verify({ onBack }: VerifyProps) {
                     Posisikan wajahmu di dalam oval. Lepaskan kacamata hitam atau penutup wajah, lalu pastikan cahaya menghadap ke wajah.
                   </p>
 
+                  <div className={`mt-5 flex items-center gap-2 border px-3 py-2 text-[11px] ${
+                    ktpFaceState === 'ready'
+                      ? 'border-emerald-500/30 bg-emerald-500/[.06] text-emerald-300'
+                      : ktpFaceState === 'error'
+                        ? 'border-[#ff304f]/40 bg-[#ff304f]/[.06] text-[#ff9aaa]'
+                        : 'border-zinc-800 bg-zinc-950/45 text-zinc-500'
+                  }`} data-testid="status-wajah-ktp">
+                    <span className={`h-1.5 w-1.5 rounded-full ${
+                      ktpFaceState === 'ready' ? 'bg-emerald-400' : ktpFaceState === 'error' ? 'bg-[#ff304f]' : 'animate-pulse bg-zinc-500'
+                    }`} />
+                    {ktpFaceState === 'ready'
+                      ? 'Wajah pada KTP berhasil diisolasi dan siap dicocokkan.'
+                      : ktpFaceState === 'error'
+                        ? 'Wajah pada KTP belum berhasil dibaca. Foto ulang KTP dengan wajah yang lebih jelas.'
+                        : 'Menyiapkan area wajah dari foto KTP...'}
+                  </div>
+
                   <div className="relative mx-auto mt-7 max-w-[560px] overflow-hidden border border-zinc-700 bg-black">
                     {selfieCaptured && selfieUrl ? (
                       <img src={selfieUrl} alt="Pratinjau foto wajah" className="aspect-square w-full object-cover" data-testid="img-pratinjau-wajah" />
@@ -507,7 +593,7 @@ export default function Verify({ onBack }: VerifyProps) {
                       <ScanFace size={18} />
                     </span>
                     <div>
-                      <p className="text-sm font-medium text-zinc-100">Memeriksa identitas</p>
+                       <p className="text-sm font-medium text-zinc-100">Sedang memverifikasi...</p>
                       <p className="mono mt-1 text-[9px] uppercase tracking-[.14em] text-zinc-600">jangan tutup halaman ini</p>
                     </div>
                   </div>
@@ -528,7 +614,7 @@ export default function Verify({ onBack }: VerifyProps) {
 
                   <div className="mt-7">
                     <div className="mb-2 flex items-center justify-between text-xs">
-                      <span className="text-zinc-400" data-testid="status-pemrosesan">Mencocokkan data biometrik...</span>
+                       <span className="text-zinc-400" data-testid="status-pemrosesan">Mencocokkan wajah KTP dengan selfie...</span>
                       <span className="mono text-[#ff6178]" data-testid="text-progress">{Math.round(processProgress)}%</span>
                     </div>
                     <div className="h-1.5 overflow-hidden bg-zinc-800">

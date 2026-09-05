@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Dispatch, FormEvent, ReactNode, SetStateAction } from 'react';
 import { Link, Route, Switch, useLocation, useParams, Router as WouterRouter } from 'wouter';
 import { scanKtpImage } from './utils/scanKtp';
+import { setValidatedKtp } from './utils/verificationSession';
 import Verify from './pages/Verify';
 import {
   ArrowLeft, ArrowRight, BadgeCheck, Check, CheckCircle2, ChevronRight, CircleDollarSign,
@@ -97,6 +98,7 @@ function Login() {
       setExtractedName(result.name);
       setOcrConfidence(result.confidence);
       if (result.name) setUsername(result.name);
+      setValidatedKtp(file, result.name);
       setScanState('success');
     } catch (cause) {
       setScanState('error');
@@ -117,7 +119,7 @@ function Login() {
   const scanIdentity = () => {
     if (!imageFile) return;
     if (scanState === 'success') {
-      setLocation('/beranda');
+      setLocation('/verify');
       return;
     }
     void scanFile(imageFile);
@@ -140,8 +142,8 @@ function Login() {
           <div className="border border-zinc-800 bg-zinc-950/85 p-6 backdrop-blur-xl red-glow md:p-8">
             <div className="mb-8 flex items-start justify-between"><div><p className="mono mb-2 text-[10px] uppercase tracking-[.22em] text-zinc-500">akses warga / scanner OCR</p><h2 className="text-2xl font-medium tracking-tight">Verifikasi identitas</h2></div><div className="flex h-9 w-9 items-center justify-center border border-[#ff304f]/40 text-[#ff304f]"><ScanLine size={17} /></div></div>
              <div className="mb-5 border border-zinc-800 bg-zinc-900/45 px-3 py-3" aria-live="polite"><div className="mb-1 flex items-center justify-between gap-3"><span className="text-xs text-zinc-400">Nama pengguna</span><span className="mono text-[9px] uppercase tracking-[.16em] text-zinc-600">otomatis</span></div><div className={`min-h-6 text-sm ${username ? 'text-zinc-100' : 'text-zinc-600'}`} data-testid="text-nama-pengguna">{username || (scanState === 'scanning' ? 'Membaca nama dari KTP...' : 'Nama akan muncul setelah foto diunggah')}</div></div>
-             {!imageUrl ? <label className="group flex min-h-[218px] cursor-pointer flex-col items-center justify-center border border-dashed border-zinc-700 bg-zinc-900/40 px-5 text-center transition hover:border-[#ff304f]/70 hover:bg-[#ff304f]/[.04]"><input type="file" accept="image/*" className="sr-only" onChange={e => handleFile(e.target.files?.[0])} /><Upload size={28} className="mb-4 text-[#ff6178] transition group-hover:scale-110" /><span className="text-sm font-medium text-zinc-200">Unggah Foto KTP untuk Verifikasi</span><span className="mt-2 text-[11px] leading-5 text-zinc-600">Sudut foto dan pencahayaan berbeda tetap bisa diproses.</span></label> : <div className="space-y-4"><div className="relative overflow-hidden border border-zinc-700 bg-black"><img src={imageUrl} alt="Pratinjau foto KTP" className="max-h-[250px] w-full object-contain" />{scanState === 'scanning' && <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/75 backdrop-blur-sm"><div className="mb-3 h-9 w-9 animate-spin rounded-full border-2 border-zinc-600 border-t-[#ff304f]" /><p className="text-sm text-zinc-200">Menganalisis dokumen OCR...</p></div>}</div><div className="flex gap-3"><button type="button" onClick={resetScanner} disabled={scanState === 'scanning'} className="btn-quiet flex h-11 flex-1 items-center justify-center gap-2 text-sm disabled:opacity-40"><RefreshCcw size={15} /> Ganti Foto</button><button type="button" onClick={scanIdentity} disabled={scanState === 'scanning'} className="btn-primary flex h-11 flex-1 items-center justify-center gap-2 text-sm font-semibold disabled:opacity-50">{scanState === 'scanning' ? 'Memindai...' : scanState === 'success' ? <><ArrowRight size={16} /> Masuk ke ruang isu</> : <><ScanLine size={16} /> Scan Identitas</>}</button></div></div>}
-             {scanState === 'success' && <div className="mt-4 border border-emerald-500/40 bg-emerald-500/10 px-3 py-3 text-sm text-emerald-300">KTP terdeteksi dari teks{extractedNik && <>: <strong className="mono">{extractedNik}</strong></>}{!extractedNik && <span className="block text-[11px] text-emerald-300/80">NIK belum terbaca sempurna, tetapi label KTP berhasil dikenali.</span>}{extractedName && <span className="mt-1 block">Nama: <strong>{extractedName}</strong></span>}<span className="mt-1 block text-[11px] text-emerald-400/70">OCR {ocrConfidence ?? 0}% · siap masuk ke ruang isu.</span></div>}
+             {!imageUrl ? <label className="group flex min-h-[218px] cursor-pointer flex-col items-center justify-center border border-dashed border-zinc-700 bg-zinc-900/40 px-5 text-center transition hover:border-[#ff304f]/70 hover:bg-[#ff304f]/[.04]"><input type="file" accept="image/*" className="sr-only" onChange={e => handleFile(e.target.files?.[0])} /><Upload size={28} className="mb-4 text-[#ff6178] transition group-hover:scale-110" /><span className="text-sm font-medium text-zinc-200">Unggah Foto KTP untuk Verifikasi</span><span className="mt-2 text-[11px] leading-5 text-zinc-600">Sudut foto dan pencahayaan berbeda tetap bisa diproses.</span></label> : <div className="space-y-4"><div className="relative overflow-hidden border border-zinc-700 bg-black"><img src={imageUrl} alt="Pratinjau foto KTP" className="max-h-[250px] w-full object-contain" />{scanState === 'scanning' && <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/75 backdrop-blur-sm"><div className="mb-3 h-9 w-9 animate-spin rounded-full border-2 border-zinc-600 border-t-[#ff304f]" /><p className="text-sm text-zinc-200">Menganalisis dokumen OCR...</p></div>}</div><div className="flex gap-3"><button type="button" onClick={resetScanner} disabled={scanState === 'scanning'} className="btn-quiet flex h-11 flex-1 items-center justify-center gap-2 text-sm disabled:opacity-40"><RefreshCcw size={15} /> Ganti Foto</button><button type="button" onClick={scanIdentity} disabled={scanState === 'scanning'} className="btn-primary flex h-11 flex-1 items-center justify-center gap-2 text-sm font-semibold disabled:opacity-50">{scanState === 'scanning' ? 'Memindai...' : scanState === 'success' ? <><ArrowRight size={16} /> Lanjut verifikasi wajah</> : <><ScanLine size={16} /> Scan Identitas</>}</button></div></div>}
+             {scanState === 'success' && <div className="mt-4 border border-emerald-500/40 bg-emerald-500/10 px-3 py-3 text-sm text-emerald-300">KTP terdeteksi dari teks{extractedNik && <>: <strong className="mono">{extractedNik}</strong></>}{!extractedNik && <span className="block text-[11px] text-emerald-300/80">NIK belum terbaca sempurna, tetapi label KTP berhasil dikenali.</span>}{extractedName && <span className="mt-1 block">Nama: <strong>{extractedName}</strong></span>}<span className="mt-1 block text-[11px] text-emerald-400/70">OCR {ocrConfidence ?? 0}% · lanjutkan ke verifikasi wajah.</span></div>}
             {scanState === 'error' && error && <div className="mt-4 border border-[#ff304f]/40 bg-[#ff304f]/10 px-3 py-3 text-sm text-[#ff8495]">{error}</div>}
             <p className="mt-5 flex items-start gap-2 text-[11px] leading-5 text-zinc-600"><LockKeyhole size={13} className="mt-0.5 shrink-0" /> Foto diproses sementara di perangkat ini untuk membaca nomor identitas.</p>
             <div className="mt-8 border-t border-zinc-800 pt-5 text-center"><p className="text-[11px] leading-5 text-zinc-600">Dengan masuk, kamu menyetujui <span className="text-zinc-400">panduan komunitas</span> Demo Digital.</p></div>
@@ -385,7 +387,7 @@ function PaymentSuccess() {
 
 function VerifyRoute() {
   const [, setLocation] = useLocation();
-  return <Verify onBack={() => setLocation('/beranda')} />;
+  return <Verify onBack={() => setLocation('/')} onSuccess={() => setLocation('/beranda')} />;
 }
 
 function NotFound() {

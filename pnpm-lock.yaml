@@ -225,6 +225,9 @@ importers:
 
   artifacts/demo-digital:
     dependencies:
+      '@vladmandic/face-api':
+        specifier: ^1.7.15
+        version: 1.7.15
       tesseract.js:
         specifier: ^7.0.0
         version: 7.0.0
@@ -1725,6 +1728,10 @@ packages:
     engines: {node: ^20.19.0 || >=22.12.0}
     peerDependencies:
       vite: ^4.2.0 || ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0
+
+  '@vladmandic/face-api@1.7.15':
+    resolution: {integrity: sha512-WDMmK3CfNLo8jylWqMoQgf4nIst3M0fzx1dnac96wv/dvMTN4DxC/Pq1DGtduDk1lktCamQ3MIDXFnvrdHTXDw==}
+    engines: {node: '>=14.0.0'}
 
   accepts@2.0.0:
     resolution: {integrity: sha512-5cvg6CtKwfgdmVqY1WIiXKc3Q1bkRqGLi+2W/6ao+6Y7gu/RCwRuAhGEzh5B4KlszSuTLgZYuqFqo5bImjNKng==}
@@ -4436,6 +4443,8 @@ snapshots:
       vite: 7.3.6(@types/node@25.9.5)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.1)(yaml@2.9.0)
     transitivePeerDependencies:
       - supports-color
+
+  '@vladmandic/face-api@1.7.15': {}
 
   accepts@2.0.0:
     dependencies:
