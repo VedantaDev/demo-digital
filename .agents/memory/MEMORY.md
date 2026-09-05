@@ -1,0 +1,1 @@
+- [API contract generator quirks](api-contract-quirks.md) — OpenAPI email formats can generate unsupported Zod helpers; verify codegen against the workspace runtime.

@@ -66,3 +66,32 @@ export const CreateIssueCommentResponse = zod.object({
 })
 
 
+/**
+ * @summary Deliver an issue submission without database persistence
+ */
+export const createIssueSubmissionBodyTitleMax = 160;
+
+export const createIssueSubmissionBodyCategoryMax = 80;
+
+export const createIssueSubmissionBodyDescriptionMax = 4000;
+
+export const createIssueSubmissionBodyAuthorMax = 120;
+
+export const createIssueSubmissionBodyEmailMax = 254;
+
+
+
+export const CreateIssueSubmissionBody = zod.object({
+  "title": zod.string().min(1).max(createIssueSubmissionBodyTitleMax),
+  "category": zod.string().min(1).max(createIssueSubmissionBodyCategoryMax),
+  "description": zod.string().min(1).max(createIssueSubmissionBodyDescriptionMax),
+  "author": zod.string().max(createIssueSubmissionBodyAuthorMax).optional(),
+  "email": zod.string().max(createIssueSubmissionBodyEmailMax).optional()
+})
+
+export const CreateIssueSubmissionResponse = zod.object({
+  "success": zod.boolean(),
+  "delivery": zod.enum(['discord', 'local'])
+})
+
+

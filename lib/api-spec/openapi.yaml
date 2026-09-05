@@ -12,6 +12,8 @@ tags:
     description: Health operations
   - name: comments
     description: Issue discussion operations
+  - name: issue-submissions
+    description: Issue submission delivery operations
 paths:
   /healthz:
     get:
@@ -71,6 +73,28 @@ paths:
           description: Invalid comment
         "502":
           description: Comment service unavailable
+  /issue-submissions:
+    post:
+      operationId: createIssueSubmission
+      tags: [issue-submissions]
+      summary: Deliver an issue submission without database persistence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IssueSubmissionInput"
+      responses:
+        "200":
+          description: Submission delivered to Discord or queued locally when no webhook is configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssueSubmissionResponse"
+        "400":
+          description: Invalid issue submission
+        "502":
+          description: Discord webhook unavailable
 components:
   schemas:
     HealthStatus:
@@ -126,4 +150,40 @@ components:
       required:
         - comment
         - botComment
+    IssueSubmissionInput:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 160
+        category:
+          type: string
+          minLength: 1
+          maxLength: 80
+        description:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        author:
+          type: string
+          maxLength: 120
+        email:
+          type: string
+          maxLength: 254
+      required:
+        - title
+        - category
+        - description
+    IssueSubmissionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        delivery:
+          type: string
+          enum: [discord, local]
+      required:
+        - success
+        - delivery
 

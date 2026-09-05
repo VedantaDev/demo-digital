@@ -11,3 +11,6 @@ export * from './commentCreateResponse';
 export * from './createComment';
 export * from './getIssueCommentsParams';
 export * from './healthStatus';
+export * from './issueSubmissionInput';
+export * from './issueSubmissionResponse';
+export * from './issueSubmissionResponseDelivery';

@@ -1,0 +1,38 @@
+Ubah tombol dan alur 'Buat Isu Baru' menjadi 'Ajukan Isu'. Agar tidak membebani database, hapus proses insert data pengajuan ini ke database. Terapkan alur berikut:
+
+Ganti UI & Form: Ubah teks tombol menjadi 'Ajukan Isu'. Saat diklik, tampilkan modal/formulir pengajuan isu dengan field: Judul Isu, Kategori, Deskripsi, dan Nama/Email Pengaju (opsional).
+
+Kirim via Webhook (No DB): Saat formulir dikirim, kirim payload data tersebut ke Discord Webhook URL (sediakan variabel DISCORD_WEBHOOK_URL di .env). Jangan simpan data ini ke dalam database.
+
+Feedback UI: Tampilkan notifikasi toast atau pop-up 'Pengajuan isu kamu berhasil dikirim dan sedang ditinjau oleh admin' setelah respons webhook berhasil, lalu tutup modalnya.
+
+Mock Data Lokal: Jika Webhook URL belum diisi, simpan sementara data pengajuan ke localStorage browser hanya agar UI memberikan respons sukses tanpa error.
+
+
+
+setelah itu di latar belakang countdown buat latar belakang nya fill atau isi bagian kosong agar seperti borderless....
+
+
+
+lalu juga tambahkan isu lainnya yang banyak
+Berikut daftar 10 isu populer dan realistis yang bisa kamu pakai sebagai dummy data atau pilihan trending topic di aplikasi:
+
+#PrayForKalimantan — Penanganan Kebakaran Hutan & Bencana Asap Lingkungan.
+
+Evaluasi & Distribusi MBG — Pengawasan Kualitas & Pemerataan Program Makan Bergizi Gratis.
+
+Kenaikan Harga Bahan Pokok — Kenaikan Harga Sembako & Daya Beli Masyarakat.
+
+Krisis TPA & Pengolahan Sampah — Penumpukan Sampah Perkotaan & Sistem Daur Ulang.
+
+Polusi Udara & Transportasi Publik — Integrasi Armada Bus/Kereta & Emisi Kendaraan.
+
+Keamanan Data Pribadi — Perlindungan Data Digital dari Kebocoran & Penipuan Online.
+
+Kesejahteraan Guru Honorer — Kejelasan Status & Kelayakan Gaji Tenaga Pendidik.
+
+Transparansi Dana Desa — Pengawasan Anggaran Infrastruktur & Pembangunan Daerah.
+
+Krisis Akses Air Bersih — Pemenuhan Fasilitas Air Minum di Wilayah Pelosok.
+
+Fasilitas Kesehatan Mental — Penyediaan Layanan Konseling Gratis di Pusat Kesehatan Masyarakat.

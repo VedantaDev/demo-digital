@@ -30,6 +30,41 @@ export interface CommentCreateResponse {
   warning?: string;
 }
 
+export interface IssueSubmissionInput {
+  /**
+     * @minLength 1
+     * @maxLength 160
+     */
+  title: string;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  category: string;
+  /**
+     * @minLength 1
+     * @maxLength 4000
+     */
+  description: string;
+  /** @maxLength 120 */
+  author?: string;
+  /** @maxLength 254 */
+  email?: string;
+}
+
+export type IssueSubmissionResponseDelivery = typeof IssueSubmissionResponseDelivery[keyof typeof IssueSubmissionResponseDelivery];
+
+
+export const IssueSubmissionResponseDelivery = {
+  discord: 'discord',
+  local: 'local',
+} as const;
+
+export interface IssueSubmissionResponse {
+  success: boolean;
+  delivery: IssueSubmissionResponseDelivery;
+}
+
 export type GetIssueCommentsParams = {
 issue_id: string;
 };

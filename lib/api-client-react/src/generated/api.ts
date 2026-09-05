@@ -24,7 +24,9 @@ import type {
   CommentCreateResponse,
   CreateComment,
   GetIssueCommentsParams,
-  HealthStatus
+  HealthStatus,
+  IssueSubmissionInput,
+  IssueSubmissionResponse
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -285,5 +287,76 @@ export const useCreateIssueComment = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getCreateIssueCommentMutationOptions(options));
+    }
+
+export const getCreateIssueSubmissionUrl = () => {
+
+
+
+
+  return `/api/issue-submissions`
+}
+
+/**
+ * @summary Deliver an issue submission without database persistence
+ */
+export const createIssueSubmission = async (issueSubmissionInput: IssueSubmissionInput, options?: Parameters<typeof customFetch>[1]): Promise<IssueSubmissionResponse> => {
+
+  return customFetch<IssueSubmissionResponse>(getCreateIssueSubmissionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(issueSubmissionInput)
+  }
+);}
+
+
+
+
+
+export const getCreateIssueSubmissionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createIssueSubmission>>, TError,{data: BodyType<IssueSubmissionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createIssueSubmission>>, TError,{data: BodyType<IssueSubmissionInput>}, TContext> => {
+
+const mutationKey = ['createIssueSubmission'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createIssueSubmission>>, {data: BodyType<IssueSubmissionInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createIssueSubmission(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateIssueSubmissionMutationResult = NonNullable<Awaited<ReturnType<typeof createIssueSubmission>>>
+    export type CreateIssueSubmissionMutationBody = BodyType<IssueSubmissionInput>
+    export type CreateIssueSubmissionMutationError = ErrorType<void>
+
+    /**
+ * @summary Deliver an issue submission without database persistence
+ */
+export const useCreateIssueSubmission = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createIssueSubmission>>, TError,{data: BodyType<IssueSubmissionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createIssueSubmission>>,
+        TError,
+        {data: BodyType<IssueSubmissionInput>},
+        TContext
+      > => {
+      return useMutation(getCreateIssueSubmissionMutationOptions(options));
     }
 

@@ -17,12 +17,42 @@ type Issue = {
   bisaDonasi: boolean; targetDana?: number; danaTerkumpul?: number;
 };
 
+type IssueSubmission = {
+  title: string;
+  category: string;
+  description: string;
+  author: string;
+  email: string;
+};
+
 const ASSET_BASE = import.meta.env.BASE_URL;
 const initialIssues: Issue[] = [
   { id: 'perbaikan-jalan-daerah-x', category: 'INFRASTRUKTUR', title: 'Perbaikan Jalan Daerah X', description: 'Dorong pemerintah mempercepat perbaikan Jalan Daerah X agar aman dilalui warga, dilengkapi penerangan, dan progres pengerjaannya dapat diawasi bersama.', votes: 12942, target: 16000, supporters: 867, comments: 241, author: 'Warga Bergerak', time: '5 jam lalu', hot: true, bisaDonasi: true, targetDana: 50000000, danaTerkumpul: 12000000 },
   { id: 'makan-bergizi-gratis', category: 'PENDIDIKAN & GIZI', title: 'Makan Bergizi Gratis', description: 'Kawal agar program Makan Bergizi Gratis berjalan transparan, memiliki menu berkualitas, dan benar-benar sampai ke anak yang membutuhkan.', votes: 18240, target: 20000, supporters: 1248, comments: 356, author: 'Suara Pelajar Nusantara', time: '47 menit lalu', hot: true, bisaDonasi: false },
   { id: 'berantas-korupsi', category: 'INTEGRITAS PUBLIK', title: 'Perkuat penanganan korupsi tanpa pandang bulu', description: 'Kawal penegakan hukum yang transparan dan tegas. Tidak boleh ada impunitas bagi siapa pun yang merugikan uang rakyat.', votes: 15680, target: 18000, supporters: 1092, comments: 418, author: 'Kawal Anggaran', time: '2 jam lalu', hot: true, bisaDonasi: false },
   { id: 'transparansi-kebijakan', category: 'KEBIJAKAN PUBLIK', title: 'Buka data kebijakan agar publik bisa mengawasi', description: 'Setiap keputusan yang berdampak pada warga harus mudah diakses, dipahami, dan dipertanggungjawabkan secara terbuka.', votes: 7860, target: 12000, supporters: 516, comments: 129, author: 'Forum Warga Terbuka', time: '1 hari lalu', bisaDonasi: false },
+  { id: 'pray-for-kalimantan', category: 'LINGKUNGAN', title: '#PrayForKalimantan', description: 'Dorong penanganan kebakaran hutan dan lahan yang cepat, terbuka, serta melindungi warga dari bencana asap lingkungan.', votes: 17420, target: 20000, supporters: 1326, comments: 287, author: 'Kalimantan Bergerak', time: '32 menit lalu', hot: true, bisaDonasi: false },
+  { id: 'evaluasi-distribusi-mbg', category: 'PENDIDIKAN & GIZI', title: 'Evaluasi & Distribusi MBG', description: 'Awasi kualitas, keamanan, dan pemerataan Program Makan Bergizi Gratis agar manfaatnya sampai ke seluruh sekolah dan anak yang membutuhkan.', votes: 15110, target: 20000, supporters: 1104, comments: 243, author: 'Orang Tua Mengawal', time: '1 jam lalu', hot: true, bisaDonasi: false },
+  { id: 'kenaikan-harga-bahan-pokok', category: 'EKONOMI RAKYAT', title: 'Kenaikan Harga Bahan Pokok', description: 'Minta pengawasan distribusi dan kebijakan yang menjaga harga sembako tetap terjangkau serta melindungi daya beli masyarakat.', votes: 14380, target: 18000, supporters: 987, comments: 205, author: 'Pasar Rakyat', time: '3 jam lalu', hot: true, bisaDonasi: false },
+  { id: 'krisis-tpa-pengolahan-sampah', category: 'LINGKUNGAN', title: 'Krisis TPA & Pengolahan Sampah', description: 'Dorong solusi penumpukan sampah perkotaan melalui pengolahan yang layak, sistem daur ulang, dan pengurangan sampah dari sumbernya.', votes: 9840, target: 15000, supporters: 722, comments: 174, author: 'Komunitas Bumi Bersih', time: '6 jam lalu', bisaDonasi: false },
+  { id: 'polusi-udara-transportasi-publik', category: 'LINGKUNGAN & TRANSPORTASI', title: 'Polusi Udara & Transportasi Publik', description: 'Percepat integrasi armada bus dan kereta, perluas akses transportasi publik, dan tekan emisi kendaraan di kota-kota besar.', votes: 11760, target: 16000, supporters: 864, comments: 191, author: 'Udara Untuk Semua', time: '8 jam lalu', bisaDonasi: false },
+  { id: 'keamanan-data-pribadi', category: 'TEKNOLOGI & HAK DIGITAL', title: 'Keamanan Data Pribadi', description: 'Perkuat perlindungan data digital warga dari kebocoran, penyalahgunaan identitas, dan penipuan online dengan penegakan yang tegas.', votes: 13220, target: 18000, supporters: 931, comments: 226, author: 'Warga Digital', time: '10 jam lalu', hot: true, bisaDonasi: false },
+  { id: 'kesejahteraan-guru-honorer', category: 'PENDIDIKAN', title: 'Kesejahteraan Guru Honorer', description: 'Perjuangkan kejelasan status, pendapatan yang layak, dan perlindungan kerja bagi tenaga pendidik honorer di seluruh Indonesia.', votes: 10930, target: 15000, supporters: 803, comments: 164, author: 'Guru Bersatu', time: '12 jam lalu', bisaDonasi: false },
+  { id: 'transparansi-dana-desa', category: 'PEMERINTAHAN DAERAH', title: 'Transparansi Dana Desa', description: 'Buka pengawasan anggaran infrastruktur dan pembangunan daerah agar dana desa benar-benar digunakan untuk kebutuhan warga.', votes: 8750, target: 14000, supporters: 641, comments: 137, author: 'Desa Terbuka', time: '1 hari lalu', bisaDonasi: false },
+  { id: 'krisis-akses-air-bersih', category: 'LAYANAN PUBLIK', title: 'Krisis Akses Air Bersih', description: 'Penuhi fasilitas air minum yang aman dan berkelanjutan bagi warga di wilayah pelosok dan daerah yang belum terlayani.', votes: 7680, target: 12000, supporters: 559, comments: 118, author: 'Air Untuk Negeri', time: '1 hari lalu', bisaDonasi: false },
+  { id: 'fasilitas-kesehatan-mental', category: 'KESEHATAN', title: 'Fasilitas Kesehatan Mental', description: 'Perluas layanan konseling gratis dan mudah diakses di puskesmas serta pusat kesehatan masyarakat di setiap daerah.', votes: 9230, target: 14000, supporters: 688, comments: 152, author: 'Ruang Pulih', time: '2 hari lalu', bisaDonasi: false },
+];
+
+const issueCategories = [
+  'LINGKUNGAN',
+  'PENDIDIKAN',
+  'KESEHATAN',
+  'EKONOMI RAKYAT',
+  'INFRASTRUKTUR',
+  'LAYANAN PUBLIK',
+  'PEMERINTAHAN DAERAH',
+  'TEKNOLOGI & HAK DIGITAL',
+  'LAINNYA',
 ];
 
 const formatNum = (n: number) => new Intl.NumberFormat('id-ID').format(n);
@@ -188,33 +218,92 @@ function IssueCard({ issue, voted, onVote }: { issue: Issue; voted: boolean; onV
   </article>;
 }
 
-function NewIssueModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (title: string, desc: string) => void }) {
-  const [title, setTitle] = useState(''); const [desc, setDesc] = useState('');
-  return <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-0 backdrop-blur-sm sm:items-center sm:p-5"><div className="w-full max-w-lg border border-zinc-700 bg-zinc-950 p-6 red-glow sm:p-8">
-    <div className="mb-7 flex items-start justify-between"><div><p className="mono mb-2 text-[9px] tracking-[.2em] text-[#ff6178]">MULAI GERAKAN</p><h2 className="text-2xl font-medium">Buat isu baru</h2></div><button onClick={onClose} className="text-zinc-500 hover:text-zinc-100"><X size={20} /></button></div>
-    <form onSubmit={e => { e.preventDefault(); if (title.trim() && desc.trim()) onSubmit(title, desc); }} className="space-y-5"><label className="block"><span className="mb-2 block text-sm text-zinc-300">Judul isu</span><input required value={title} onChange={e => setTitle(e.target.value)} placeholder="Apa yang ingin kamu ubah?" className="field h-12 w-full px-4 text-sm" /></label><label className="block"><span className="mb-2 block text-sm text-zinc-300">Ceritakan masalahnya</span><textarea required value={desc} onChange={e => setDesc(e.target.value)} rows={5} placeholder="Beri konteks agar warga lain bisa ikut memahami..." className="field w-full resize-none p-4 text-sm leading-6" /></label><div className="flex justify-end gap-3 pt-2"><button type="button" onClick={onClose} className="btn-quiet px-4 py-2.5 text-sm">Batal</button><button className="btn-primary flex items-center gap-2 px-5 py-2.5 text-sm font-medium">Terbitkan isu <ArrowRight size={15} /></button></div></form>
+function NewIssueModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (submission: IssueSubmission) => Promise<void> }) {
+  const [title, setTitle] = useState('');
+  const [category, setCategory] = useState(issueCategories[0]);
+  const [description, setDescription] = useState('');
+  const [author, setAuthor] = useState('');
+  const [email, setEmail] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
+    setError('');
+    try {
+      await onSubmit({ title: title.trim(), category, description: description.trim(), author: author.trim(), email: email.trim() });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Pengajuan belum dapat dikirim. Coba lagi.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-0 backdrop-blur-sm sm:items-center sm:p-5"><div className="max-h-[92dvh] w-full max-w-lg overflow-y-auto border border-zinc-700 bg-zinc-950 p-6 red-glow sm:p-8" role="dialog" aria-modal="true" aria-labelledby="ajukan-isu-title">
+    <div className="mb-7 flex items-start justify-between"><div><p className="mono mb-2 text-[9px] tracking-[.2em] text-[#ff6178]">KIRIM UNTUK DITINJAU</p><h2 id="ajukan-isu-title" className="text-2xl font-medium">Ajukan isu</h2><p className="mt-2 max-w-sm text-xs leading-5 text-zinc-500">Pengajuan akan diperiksa admin sebelum tampil sebagai isu publik.</p></div><button type="button" onClick={onClose} disabled={submitting} className="text-zinc-500 hover:text-zinc-100 disabled:opacity-40" aria-label="Tutup formulir"><X size={20} /></button></div>
+    <form onSubmit={submit} className="space-y-5">
+      <label className="block"><span className="mb-2 block text-sm text-zinc-300">Judul isu</span><input required maxLength={160} value={title} onChange={e => setTitle(e.target.value)} placeholder="Contoh: Perbaiki akses air bersih di desa kami" className="field h-12 w-full px-4 text-sm" /></label>
+      <label className="block"><span className="mb-2 block text-sm text-zinc-300">Kategori</span><select required value={category} onChange={e => setCategory(e.target.value)} className="field h-12 w-full px-4 text-sm">{issueCategories.map(option => <option key={option} value={option}>{option}</option>)}</select></label>
+      <label className="block"><span className="mb-2 block text-sm text-zinc-300">Deskripsi isu</span><textarea required maxLength={4000} value={description} onChange={e => setDescription(e.target.value)} rows={5} placeholder="Jelaskan masalah, dampak, dan perubahan yang kamu harapkan..." className="field w-full resize-none p-4 text-sm leading-6" /><span className="mt-1 block text-right text-[10px] text-zinc-600">{description.length}/4000</span></label>
+      <div className="grid gap-5 sm:grid-cols-2">
+        <label className="block"><span className="mb-2 block text-sm text-zinc-300">Nama pengaju <span className="text-zinc-600">(opsional)</span></span><input maxLength={120} value={author} onChange={e => setAuthor(e.target.value)} placeholder="Nama atau organisasi" className="field h-12 w-full px-4 text-sm" /></label>
+        <label className="block"><span className="mb-2 block text-sm text-zinc-300">Email <span className="text-zinc-600">(opsional)</span></span><input type="email" maxLength={254} value={email} onChange={e => setEmail(e.target.value)} placeholder="nama@email.com" className="field h-12 w-full px-4 text-sm" /></label>
+      </div>
+      {error && <div className="border border-[#ff304f]/40 bg-[#ff304f]/10 px-3 py-3 text-sm leading-5 text-[#ff9aaa]" role="alert">{error}</div>}
+      <div className="flex justify-end gap-3 pt-2"><button type="button" onClick={onClose} disabled={submitting} className="btn-quiet px-4 py-2.5 text-sm disabled:opacity-40">Batal</button><button type="submit" disabled={submitting} className="btn-primary flex items-center gap-2 px-5 py-2.5 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-55">{submitting ? <><Loader2 size={15} className="animate-spin" /> Mengirim...</> : <>Kirim pengajuan <ArrowRight size={15} /></>}</button></div>
+    </form>
   </div></div>;
 }
 
+function IssueSubmissionToast({ onClose }: { onClose: () => void }) {
+  useEffect(() => {
+    const timer = window.setTimeout(onClose, 6000);
+    return () => window.clearTimeout(timer);
+  }, [onClose]);
+  return <div className="fixed bottom-5 right-5 z-[60] flex max-w-sm items-start gap-3 border border-emerald-500/35 bg-zinc-950/95 px-4 py-4 text-sm text-emerald-200 shadow-[0_0_30px_rgba(16,185,129,.14)] backdrop-blur-xl" role="status"><CheckCircle2 size={19} className="mt-0.5 shrink-0 text-emerald-400" /><div className="flex-1 leading-5">Pengajuan isu kamu berhasil dikirim dan sedang ditinjau oleh admin</div><button type="button" onClick={onClose} className="text-emerald-400/70 hover:text-emerald-200" aria-label="Tutup notifikasi"><X size={17} /></button></div>;
+}
+
 function Beranda({ issues, setIssues }: { issues: Issue[]; setIssues: Dispatch<SetStateAction<Issue[]>> }) {
-  const [search, setSearch] = useState(''); const [modal, setModal] = useState(false); const [voted, setVoted] = useState<string[]>([]); const [heroSlide, setHeroSlide] = useState(0); const [actionEnd] = useState(() => Date.now() + 9 * 24 * 60 * 60 * 1000);
+  const [search, setSearch] = useState(''); const [modal, setModal] = useState(false); const [toast, setToast] = useState(false); const [voted, setVoted] = useState<string[]>([]); const [heroSlide, setHeroSlide] = useState(0); const [actionEnd] = useState(() => Date.now() + 9 * 24 * 60 * 60 * 1000);
   useEffect(() => {
     const timer = window.setInterval(() => setHeroSlide((current) => current === 0 ? 1 : 0), 3000);
     return () => window.clearInterval(timer);
   }, []);
   const filtered = useMemo(() => issues.filter(i => `${i.title} ${i.description} ${i.category}`.toLowerCase().includes(search.toLowerCase())), [issues, search]);
   const vote = (id: string) => { if (voted.includes(id)) return; setVoted(v => [...v, id]); setIssues(all => all.map(i => i.id === id ? { ...i, votes: i.votes + 1, supporters: i.supporters + 1 } : i)); };
-  const addIssue = (title: string, desc: string) => { const id = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `isu-${Date.now()}`; setIssues(all => [{ id, category: 'SUARA WARGA', title, description: desc, votes: 1, target: 5000, supporters: 1, comments: 0, author: 'Kamu', time: 'baru saja', bisaDonasi: false }, ...all]); setModal(false); };
+  const submitIssue = async (submission: IssueSubmission) => {
+    const response = await fetch('/api/issue-submissions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(submission),
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(payload?.error || 'Pengajuan belum dapat dikirim. Coba lagi.');
+    if (payload?.delivery === 'local') {
+      const storageKey = 'pecintakalah:issue-submissions';
+      try {
+        const parsed = JSON.parse(window.localStorage.getItem(storageKey) || '[]');
+        const stored = Array.isArray(parsed) ? parsed as Array<IssueSubmission & { submittedAt: string }> : [];
+        window.localStorage.setItem(storageKey, JSON.stringify([...stored, { ...submission, submittedAt: new Date().toISOString() }]));
+      } catch {
+        // Private browsing or a damaged local value must not hide a successful submission.
+      }
+    }
+    setModal(false);
+    setToast(true);
+  };
   return <Shell issuesCount={issues.length}><div className="mx-auto max-w-[1200px] px-5 py-8 md:px-10 md:py-12">
-    <section className="animate-rise relative min-h-[310px] overflow-hidden border border-[#ff304f]/40 bg-zinc-900/50 p-6 red-glow md:p-10">
-       {heroSlide === 0 ? <><img src={`${ASSET_BASE}hero-pecintakalah.jpeg`} alt="Aksi warga menyuarakan perubahan" className="absolute inset-0 h-full w-full object-cover object-center opacity-35" /><div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(9,9,11,.98)_0%,rgba(9,9,11,.78)_52%,rgba(9,9,11,.26)_100%)]" /><div className="relative max-w-2xl"><div className="mb-5 flex items-center gap-2 text-[#ff6178]"><Zap size={15} fill="currentColor" /><span className="mono text-[10px] font-bold uppercase tracking-[.24em]">pecintaKalah / ruang isu nasional</span></div><h1 className="text-4xl font-semibold tracking-[-.05em] md:text-6xl">Keresahanmu<br /><span className="text-[#ff304f]">punya tempat.</span></h1><p className="mt-5 max-w-lg text-sm leading-6 text-zinc-300 md:text-base">Baca. Pilih. Bergerak. Setiap dukungan menambah tekanan yang terlihat dan membuat perubahan tak bisa diabaikan.</p><button onClick={() => setModal(true)} className="btn-primary mt-7 flex items-center gap-2 px-5 py-3 text-sm font-medium"><Plus size={17} /> Buat isu baru</button></div><div className="absolute bottom-5 right-7 hidden text-right md:block"><p className="mono text-[9px] uppercase tracking-[.2em] text-zinc-400">sinyal warga</p><p className="mt-1 text-4xl font-medium text-zinc-100">+24.8K</p></div></> : <div className="relative flex min-h-[260px] flex-col justify-center overflow-hidden"><img src={`${ASSET_BASE}demoPictures.jpg`} alt="" className="absolute inset-0 h-full w-full object-cover object-center opacity-35" /><div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(9,9,11,.94)_0%,rgba(9,9,11,.72)_50%,rgba(9,9,11,.45)_100%)]" /><div className="relative z-10"><div className="mb-5 flex items-center gap-2 text-[#ff6178]"><Clock3 size={15} /><span className="mono text-[10px] font-bold uppercase tracking-[.24em]">aksi demo nasional / hitung mundur</span></div><h2 className="max-w-xl text-4xl font-semibold tracking-[-.05em] md:text-6xl">Sembilan hari<br /><span className="text-[#ff304f]">untuk bergerak.</span></h2><p className="mt-4 max-w-lg text-sm leading-6 text-zinc-300">Satukan suara dan hadir dalam aksi yang menuntut perubahan nyata.</p><div className="mt-7"><Countdown end={actionEnd} /></div></div></div>}
+     <section className="animate-rise relative min-h-[310px] overflow-hidden border border-[#ff304f]/40 bg-zinc-900/50 red-glow">
+       {heroSlide === 0 ? <div className="relative min-h-[310px] p-6 md:p-10"><img src={`${ASSET_BASE}hero-pecintakalah.jpeg`} alt="Aksi warga menyuarakan perubahan" className="absolute inset-0 h-full w-full object-cover object-center opacity-35" /><div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(9,9,11,.98)_0%,rgba(9,9,11,.78)_52%,rgba(9,9,11,.26)_100%)]" /><div className="relative max-w-2xl"><div className="mb-5 flex items-center gap-2 text-[#ff6178]"><Zap size={15} fill="currentColor" /><span className="mono text-[10px] font-bold uppercase tracking-[.24em]">pecintaKalah / ruang isu nasional</span></div><h1 className="text-4xl font-semibold tracking-[-.05em] md:text-6xl">Keresahanmu<br /><span className="text-[#ff304f]">punya tempat.</span></h1><p className="mt-5 max-w-lg text-sm leading-6 text-zinc-300 md:text-base">Baca. Pilih. Bergerak. Setiap dukungan menambah tekanan yang terlihat dan membuat perubahan tak bisa diabaikan.</p><button onClick={() => setModal(true)} className="btn-primary mt-7 flex items-center gap-2 px-5 py-3 text-sm font-medium"><Plus size={17} /> Ajukan isu</button></div><div className="absolute bottom-5 right-7 hidden text-right md:block"><p className="mono text-[9px] uppercase tracking-[.2em] text-zinc-400">sinyal warga</p><p className="mt-1 text-4xl font-medium text-zinc-100">+24.8K</p></div></div> : <div className="relative min-h-[310px] overflow-hidden p-6 md:p-10"><img src={`${ASSET_BASE}demoPictures.jpg`} alt="" className="absolute inset-0 h-full w-full object-cover object-center opacity-35" /><div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(9,9,11,.94)_0%,rgba(9,9,11,.72)_50%,rgba(9,9,11,.45)_100%)]" /><div className="relative z-10 flex min-h-[230px] flex-col justify-center"><div className="mb-5 flex items-center gap-2 text-[#ff6178]"><Clock3 size={15} /><span className="mono text-[10px] font-bold uppercase tracking-[.24em]">aksi demo nasional / hitung mundur</span></div><h2 className="max-w-xl text-4xl font-semibold tracking-[-.05em] md:text-6xl">Sembilan hari<br /><span className="text-[#ff304f]">untuk bergerak.</span></h2><p className="mt-4 max-w-lg text-sm leading-6 text-zinc-300">Satukan suara dan hadir dalam aksi yang menuntut perubahan nyata.</p><div className="mt-7"><Countdown end={actionEnd} /></div></div></div>}
       <button aria-label="Slide sebelumnya" onClick={() => setHeroSlide(s => s === 0 ? 1 : 0)} className="absolute bottom-5 left-1/2 flex -translate-x-1/2 gap-2" >{[0, 1].map(slide => <span key={slide} className={`h-1.5 transition-all ${heroSlide === slide ? 'w-8 bg-[#ff304f] shadow-[0_0_10px_#ff304f]' : 'w-3 bg-zinc-600'}`} />)}</button>
       <button aria-label="Ganti slide" onClick={() => setHeroSlide(s => s === 0 ? 1 : 0)} className="absolute right-5 top-5 border border-zinc-700 px-3 py-1.5 text-[10px] text-zinc-400 transition hover:border-[#ff304f] hover:text-[#ff6178]">{heroSlide === 0 ? 'LIHAT COUNTDOWN' : 'LIHAT AKSI'} <ChevronRight size={13} className="ml-1 inline" /></button>
     </section>
     <div className="my-9"><StatStrip /></div>
-    <section className="animate-rise animate-delay-1"><div className="mb-6 flex flex-col justify-between gap-5 md:flex-row md:items-end"><div><p className="mono mb-2 text-[10px] uppercase tracking-[.2em] text-[#ff6178]">prioritas komunitas</p><h2 className="text-2xl font-medium tracking-tight md:text-3xl">Isu yang sedang bergerak</h2></div><div className="flex flex-col gap-3 sm:flex-row"><div className="relative"><Search size={16} className="absolute left-3 top-3 text-zinc-600" /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari isu..." className="field h-10 w-full pl-9 pr-3 text-sm sm:w-52" /></div><button className="btn-quiet flex h-10 items-center justify-center gap-2 px-3 text-xs"><Sparkles size={14} /> Paling ramai <ChevronRight size={13} /></button></div></div><div className="grid gap-4">{filtered.map((issue, idx) => <div key={issue.id} className={`animate-rise animate-delay-${Math.min(idx + 1, 3)}`}><IssueCard issue={issue} voted={voted.includes(issue.id)} onVote={() => vote(issue.id)} /></div>)}{filtered.length === 0 && <div className="border border-dashed border-zinc-700 py-16 text-center"><Search className="mx-auto mb-3 text-zinc-600" size={25} /><p className="text-zinc-300">Isu tidak ditemukan</p><p className="mt-1 text-sm text-zinc-600">Coba kata kunci lain atau buat isu baru.</p></div>}</div></section>
+     <section className="animate-rise animate-delay-1"><div className="mb-6 flex flex-col justify-between gap-5 md:flex-row md:items-end"><div><p className="mono mb-2 text-[10px] uppercase tracking-[.2em] text-[#ff6178]">prioritas komunitas</p><h2 className="text-2xl font-medium tracking-tight md:text-3xl">Isu yang sedang bergerak</h2></div><div className="flex flex-col gap-3 sm:flex-row"><div className="relative"><Search size={16} className="absolute left-3 top-3 text-zinc-600" /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari isu..." className="field h-10 w-full pl-9 pr-3 text-sm sm:w-52" /></div><button className="btn-quiet flex h-10 items-center justify-center gap-2 px-3 text-xs"><Sparkles size={14} /> Paling ramai <ChevronRight size={13} /></button></div></div><div className="grid gap-4">{filtered.map((issue, idx) => <div key={issue.id} className={`animate-rise animate-delay-${Math.min(idx + 1, 3)}`}><IssueCard issue={issue} voted={voted.includes(issue.id)} onVote={() => vote(issue.id)} /></div>)}{filtered.length === 0 && <div className="border border-dashed border-zinc-700 py-16 text-center"><Search className="mx-auto mb-3 text-zinc-600" size={25} /><p className="text-zinc-300">Isu tidak ditemukan</p><p className="mt-1 text-sm text-zinc-600">Coba kata kunci lain atau ajukan isu baru.</p></div>}</div></section>
     <div className="mt-12 flex items-center justify-between border-t border-zinc-800 pt-5 text-xs text-zinc-600"><span>Menampilkan {filtered.length} dari {issues.length} isu</span><span className="mono">data diperbarui langsung</span></div>
-  </div>{modal && <NewIssueModal onClose={() => setModal(false)} onSubmit={addIssue} />}</Shell>;
+   </div>{modal && <NewIssueModal onClose={() => setModal(false)} onSubmit={submitIssue} />}{toast && <IssueSubmissionToast onClose={() => setToast(false)} />}</Shell>;
 }
 
 function Countdown({ end }: { end: number }) {
