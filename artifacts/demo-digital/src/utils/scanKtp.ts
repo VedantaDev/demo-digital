@@ -8,6 +8,8 @@ export type KtpScanResult = {
   confidence: number;
   text: string;
   preprocessing: 'adaptive-threshold' | 'grayscale';
+  matchedLabels: string[];
+  usedFullFrameFallback: boolean;
 };
 
 type OcrVariant = {
@@ -49,6 +51,120 @@ function canvasFromImage(image: HTMLImageElement): HTMLCanvasElement {
   context.imageSmoothingQuality = 'high';
   context.drawImage(image, 0, 0, canvas.width, canvas.height);
   return canvas;
+}
+
+type LinePeak = {
+  position: number;
+  strength: number;
+};
+
+type DocumentDetection = {
+  canvas: HTMLCanvasElement;
+  usedFallback: boolean;
+};
+
+function edgeProjections(source: HTMLCanvasElement) {
+  const sampleWidth = Math.min(source.width, 800);
+  const sampleHeight = Math.max(1, Math.round((source.height / source.width) * sampleWidth));
+  const sample = document.createElement('canvas');
+  sample.width = sampleWidth;
+  sample.height = sampleHeight;
+  const context = sample.getContext('2d', { willReadFrequently: true });
+  if (!context) return null;
+  context.drawImage(source, 0, 0, sampleWidth, sampleHeight);
+  const pixels = context.getImageData(0, 0, sampleWidth, sampleHeight).data;
+  const vertical = new Array<number>(sampleWidth).fill(0);
+  const horizontal = new Array<number>(sampleHeight).fill(0);
+
+  const luminanceAt = (x: number, y: number) => {
+    const index = (y * sampleWidth + x) * 4;
+    return pixels[index] * 0.299 + pixels[index + 1] * 0.587 + pixels[index + 2] * 0.114;
+  };
+
+  for (let y = 1; y < sampleHeight - 1; y += 1) {
+    for (let x = 1; x < sampleWidth - 1; x += 1) {
+      const horizontalGradient =
+        -luminanceAt(x - 1, y - 1) - 2 * luminanceAt(x - 1, y) - luminanceAt(x - 1, y + 1)
+        + luminanceAt(x + 1, y - 1) + 2 * luminanceAt(x + 1, y) + luminanceAt(x + 1, y + 1);
+      const verticalGradient =
+        -luminanceAt(x - 1, y - 1) - 2 * luminanceAt(x, y - 1) - luminanceAt(x + 1, y - 1)
+        + luminanceAt(x - 1, y + 1) + 2 * luminanceAt(x, y + 1) + luminanceAt(x + 1, y + 1);
+      const strength = Math.sqrt(horizontalGradient ** 2 + verticalGradient ** 2);
+      if (strength > 240) {
+        vertical[x] += 1;
+        horizontal[y] += 1;
+      }
+    }
+  }
+
+  return { sampleWidth, sampleHeight, vertical, horizontal };
+}
+
+function findLinePair(projection: number[], minGap: number): [LinePeak, LinePeak] | null {
+  const minPosition = Math.round(projection.length * 0.04);
+  const maxPosition = Math.round(projection.length * 0.96);
+  const candidates: LinePeak[] = [];
+  for (let position = minPosition + 1; position < maxPosition - 1; position += 1) {
+    if (projection[position] >= projection[position - 1] && projection[position] >= projection[position + 1]) {
+      candidates.push({ position, strength: projection[position] });
+    }
+  }
+
+  candidates.sort((left, right) => right.strength - left.strength);
+  const strongest = candidates.slice(0, 18);
+  let best: [LinePeak, LinePeak] | null = null;
+  let bestScore = 0;
+  for (const first of strongest) {
+    for (const second of strongest) {
+      const gap = Math.abs(first.position - second.position);
+      if (first === second || gap < minGap) continue;
+      const score = first.strength + second.strength + gap * 0.03;
+      if (score > bestScore) {
+        bestScore = score;
+        best = first.position < second.position ? [first, second] : [second, first];
+      }
+    }
+  }
+  return best;
+}
+
+function cropToDetectedDocument(source: HTMLCanvasElement): DocumentDetection {
+  const projections = edgeProjections(source);
+  if (!projections) return { canvas: source, usedFallback: true };
+
+  const xPair = findLinePair(projections.vertical, projections.sampleWidth * 0.42);
+  const yPair = findLinePair(projections.horizontal, projections.sampleHeight * 0.35);
+  if (!xPair || !yPair) return { canvas: source, usedFallback: true };
+
+  const xDensity = (xPair[0].strength + xPair[1].strength) / (projections.sampleHeight * 2);
+  const yDensity = (yPair[0].strength + yPair[1].strength) / (projections.sampleWidth * 2);
+  const detectedWidth = xPair[1].position - xPair[0].position;
+  const detectedHeight = yPair[1].position - yPair[0].position;
+  const plausibleShape = detectedWidth > projections.sampleWidth * 0.5
+    && detectedHeight > projections.sampleHeight * 0.35
+    && xDensity > 0.08
+    && yDensity > 0.08;
+
+  // Borderless/full-frame photos deliberately take this path: no crop is applied.
+  if (!plausibleShape) return { canvas: source, usedFallback: true };
+
+  const scale = source.width / projections.sampleWidth;
+  const padding = Math.round(8 * scale);
+  const left = Math.max(0, Math.round(xPair[0].position * scale) - padding);
+  const top = Math.max(0, Math.round(yPair[0].position * scale) - padding);
+  const right = Math.min(source.width, Math.round(xPair[1].position * scale) + padding);
+  const bottom = Math.min(source.height, Math.round(yPair[1].position * scale) + padding);
+  const width = right - left;
+  const height = bottom - top;
+  if (width <= 0 || height <= 0) return { canvas: source, usedFallback: true };
+
+  const cropped = document.createElement('canvas');
+  cropped.width = width;
+  cropped.height = height;
+  const cropContext = cropped.getContext('2d');
+  if (!cropContext) return { canvas: source, usedFallback: true };
+  cropContext.drawImage(source, left, top, width, height, 0, 0, width, height);
+  return { canvas: cropped, usedFallback: false };
 }
 
 function rotateCanvas(source: HTMLCanvasElement, degrees: number): HTMLCanvasElement {
@@ -257,6 +373,24 @@ function extractName(text: string): string {
   return '';
 }
 
+const KTP_TEXT_LABELS = ['PROVINSI', 'NIK', 'NAMA', 'AGAMA'] as const;
+
+function detectKtpText(text: string): string[] {
+  const normalized = text
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/1/g, 'I')
+    .replace(/4/g, 'A')
+    .replace(/0/g, 'O');
+
+  return KTP_TEXT_LABELS.filter((label) => {
+    if (normalized.includes(label)) return true;
+    const compactTokens = normalized.replace(/[^A-Z]/g, ' ').split(/\s+/).filter(Boolean);
+    return compactTokens.some((token) => editDistance(token, label) <= 1);
+  });
+}
+
 async function recognizeVariant(variant: OcrVariant): Promise<OcrRead> {
   const { default: Tesseract } = await import('tesseract.js');
   const result = await Tesseract.recognize(variant.source, 'ind+eng');
@@ -270,7 +404,8 @@ async function recognizeVariant(variant: OcrVariant): Promise<OcrRead> {
 export async function scanKtpImage(file: File): Promise<KtpScanResult> {
   const image = await loadImage(file);
   const source = canvasFromImage(image);
-  const deskewed = autoDeskew(source);
+  const document = cropToDetectedDocument(source);
+  const deskewed = autoDeskew(document.canvas);
   const grayscale = grayscaleCanvas(deskewed);
   const thresholded = adaptiveThresholdCanvas(grayscale);
   const variants: OcrVariant[] = [
@@ -281,18 +416,21 @@ export async function scanKtpImage(file: File): Promise<KtpScanResult> {
   const scored = reads.map((read) => {
     const nik = extractNik(read.text);
     const name = extractName(read.text);
+    const matchedLabels = detectKtpText(read.text);
     const validNik = isValidNIK(nik).valid;
     return {
       ...read,
       nik: validNik ? nik : '',
       name,
-      score: (validNik ? 100 : 0) + (name ? 10 : 0) + read.confidence / 100,
+      matchedLabels,
+      isKtpDocument: matchedLabels.length > 0,
+      score: (matchedLabels.length > 0 ? 150 : 0) + (validNik ? 100 : 0) + (name ? 10 : 0) + read.confidence / 100,
     };
   }).sort((left, right) => right.score - left.score);
   const best = scored[0];
 
-  if (!best || !best.nik || best.confidence < MIN_OCR_CONFIDENCE) {
-    throw new Error('Sistem tidak dapat menemukan NIK dengan keyakinan yang cukup.');
+  if (!best || !best.isKtpDocument) {
+    throw new Error('Teks penanda KTP belum ditemukan. Pastikan seluruh tulisan terlihat di dalam foto.');
   }
 
   return {
@@ -301,5 +439,7 @@ export async function scanKtpImage(file: File): Promise<KtpScanResult> {
     confidence: best.confidence,
     text: best.text,
     preprocessing: best.preprocessing,
+    matchedLabels: best.matchedLabels,
+    usedFullFrameFallback: document.usedFallback,
   };
 }

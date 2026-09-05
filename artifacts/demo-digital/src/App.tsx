@@ -31,6 +31,33 @@ function Logo({ compact = false }: { compact?: boolean }) {
   return <Link href="/beranda" className={`flex items-center ${compact ? 'justify-center' : 'gap-3'} group`}><img src={`${ASSET_BASE}logo.png`} alt="Demo Digital" className={compact ? 'h-9 w-9 object-cover object-left rounded' : 'h-10 w-[116px] object-contain object-left'} /><span className="sr-only">Demo Digital</span></Link>;
 }
 
+function AnimatedMetric({ value, label }: { value: number; label: string }) {
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    const startedAt = performance.now();
+    const duration = 1500;
+    let animationFrame = 0;
+    const animate = (now: number) => {
+      const progress = Math.min(1, (now - startedAt) / duration);
+      const eased = 1 - (1 - progress) ** 3;
+      setDisplayValue(value * eased);
+      if (progress < 1) animationFrame = window.requestAnimationFrame(animate);
+    };
+    animationFrame = window.requestAnimationFrame(animate);
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [value]);
+
+  const display = displayValue >= 1000
+    ? `${(displayValue / 1000).toFixed(displayValue < 10000 ? 1 : 0)}K`
+    : formatNum(Math.round(displayValue));
+
+  return <div className="border-l border-zinc-700 pl-7 first:border-l-0 first:pl-0">
+    <strong className="block text-xl font-medium text-zinc-100 tabular-nums">{display}</strong>
+    <span>{label}</span>
+  </div>;
+}
+
 function Login() {
   const [, setLocation] = useLocation();
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -61,30 +88,39 @@ function Login() {
     setUsername(''); setExtractedName(''); setOcrConfidence(null); setError('');
   };
 
-  const handleFile = (file?: File) => {
-    if (!file) return;
-    if (!file.type.startsWith('image/')) { setError('Pilih file gambar untuk memindai KTP.'); setScanState('error'); return; }
-    setImageFile(file); setImageUrl(URL.createObjectURL(file)); setScanState('preview'); setExtractedNik('');
-    setExtractedName(''); setOcrConfidence(null); setError('');
-  };
-
-  const scanIdentity = async () => {
-    if (!imageFile) return;
-    setScanState('scanning'); setError('');
+  const scanFile = async (file: File) => {
+    setScanState('scanning');
+    setError('');
     try {
-      const result = await scanKtpImage(imageFile);
+      const result = await scanKtpImage(file);
       setExtractedNik(result.nik);
       setExtractedName(result.name);
       setOcrConfidence(result.confidence);
       if (result.name) setUsername(result.name);
       setScanState('success');
-      window.setTimeout(() => setLocation('/beranda'), 2000);
     } catch (cause) {
       setScanState('error');
       setError(cause instanceof Error
         ? `${cause.message} Coba atur posisi KTP lebih lurus atau gunakan foto yang lebih terang.`
         : 'Pemindaian gagal. Coba gunakan foto KTP yang lebih terang dan jelas.');
     }
+  };
+
+  const handleFile = (file?: File) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { setError('Pilih file gambar untuk memindai KTP.'); setScanState('error'); return; }
+    setImageFile(file); setImageUrl(URL.createObjectURL(file)); setScanState('preview'); setExtractedNik('');
+    setExtractedName(''); setOcrConfidence(null); setError('');
+    void scanFile(file);
+  };
+
+  const scanIdentity = () => {
+    if (!imageFile) return;
+    if (scanState === 'success') {
+      setLocation('/beranda');
+      return;
+    }
+    void scanFile(imageFile);
   };
 
   return <div className="noise relative min-h-[100dvh] overflow-hidden bg-zinc-950">
@@ -98,14 +134,14 @@ function Login() {
           <div className="mb-7 flex items-center gap-3 text-[#ff6178]"><div className="h-px w-10 bg-[#ff304f]" /><span className="mono text-[10px] font-bold uppercase tracking-[.27em]">suara warga, daya nyata</span></div>
           <h1 className="max-w-xl text-5xl font-semibold leading-[.96] tracking-[-.06em] text-zinc-50 md:text-7xl">Satu suara.<br /><span className="text-[#ff304f]">Banyak perubahan.</span></h1>
           <p className="mt-7 max-w-md text-base leading-7 text-zinc-400 md:text-lg">Temukan isu yang penting bagimu, bergabung dengan gerakan, dan ubah keresahan menjadi aksi kolektif.</p>
-          <div className="mt-10 flex flex-wrap gap-7 text-xs text-zinc-500"><div><strong className="block text-xl font-medium text-zinc-100">24.8K</strong>suara terkumpul</div><div className="border-l border-zinc-700 pl-7"><strong className="block text-xl font-medium text-zinc-100">186</strong>isu aktif</div><div className="border-l border-zinc-700 pl-7"><strong className="block text-xl font-medium text-zinc-100">42</strong>kota bergerak</div></div>
+           <div className="mt-10 flex flex-wrap gap-7 text-xs text-zinc-500"><AnimatedMetric value={24800} label="suara terkumpul" /><AnimatedMetric value={186} label="isu aktif" /><AnimatedMetric value={42} label="kota bergerak" /></div>
         </section>
         <section className="animate-rise animate-delay-2 w-full max-w-md justify-self-end">
           <div className="border border-zinc-800 bg-zinc-950/85 p-6 backdrop-blur-xl red-glow md:p-8">
             <div className="mb-8 flex items-start justify-between"><div><p className="mono mb-2 text-[10px] uppercase tracking-[.22em] text-zinc-500">akses warga / scanner OCR</p><h2 className="text-2xl font-medium tracking-tight">Verifikasi identitas</h2></div><div className="flex h-9 w-9 items-center justify-center border border-[#ff304f]/40 text-[#ff304f]"><ScanLine size={17} /></div></div>
-             <label className="mb-5 block"><span className="mb-2 block text-xs text-zinc-400">Nama pengguna</span><input value={username} onChange={event => setUsername(event.target.value)} placeholder="Akan diisi dari nama pada KTP" className="field h-11 w-full px-3 text-sm" autoComplete="name" data-testid="input-nama-pengguna" />{extractedName && <span className="mt-2 block text-[10px] text-emerald-400/80">Nama terdeteksi dari hasil OCR dan masih bisa kamu edit.</span>}</label>
-             {!imageUrl ? <label className="group flex min-h-[218px] cursor-pointer flex-col items-center justify-center border border-dashed border-zinc-700 bg-zinc-900/40 px-5 text-center transition hover:border-[#ff304f]/70 hover:bg-[#ff304f]/[.04]"><input type="file" accept="image/*" className="sr-only" onChange={e => handleFile(e.target.files?.[0])} /><Upload size={28} className="mb-4 text-[#ff6178] transition group-hover:scale-110" /><span className="text-sm font-medium text-zinc-200">Unggah Foto KTP untuk Verifikasi</span><span className="mt-2 text-[11px] leading-5 text-zinc-600">Sudut foto dan pencahayaan berbeda tetap bisa diproses.</span></label> : <div className="space-y-4"><div className="relative overflow-hidden border border-zinc-700 bg-black"><img src={imageUrl} alt="Pratinjau foto KTP" className="max-h-[250px] w-full object-contain" />{scanState === 'scanning' && <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/75 backdrop-blur-sm"><div className="mb-3 h-9 w-9 animate-spin rounded-full border-2 border-zinc-600 border-t-[#ff304f]" /><p className="text-sm text-zinc-200">Menganalisis dokumen OCR...</p></div>}</div><div className="flex gap-3"><button type="button" onClick={resetScanner} disabled={scanState === 'scanning' || scanState === 'success'} className="btn-quiet flex h-11 flex-1 items-center justify-center gap-2 text-sm disabled:opacity-40"><RefreshCcw size={15} /> Ganti Foto</button><button type="button" onClick={scanIdentity} disabled={scanState === 'scanning' || scanState === 'success'} className="btn-primary flex h-11 flex-1 items-center justify-center gap-2 text-sm font-semibold disabled:opacity-50">{scanState === 'scanning' ? 'Memindai...' : <><ScanLine size={16} /> Scan Identitas</>}</button></div></div>}
-             {scanState === 'success' && <div className="mt-4 border border-emerald-500/40 bg-emerald-500/10 px-3 py-3 text-sm text-emerald-300">Identitas Terverifikasi: <strong className="mono">{extractedNik}</strong>{extractedName && <span className="mt-1 block">Nama: <strong>{extractedName}</strong></span>}<span className="mt-1 block text-[11px] text-emerald-400/70">OCR {ocrConfidence ?? 0}% · mengalihkan ke ruang isu...</span></div>}
+             <div className="mb-5 border border-zinc-800 bg-zinc-900/45 px-3 py-3" aria-live="polite"><div className="mb-1 flex items-center justify-between gap-3"><span className="text-xs text-zinc-400">Nama pengguna</span><span className="mono text-[9px] uppercase tracking-[.16em] text-zinc-600">otomatis</span></div><div className={`min-h-6 text-sm ${username ? 'text-zinc-100' : 'text-zinc-600'}`} data-testid="text-nama-pengguna">{username || (scanState === 'scanning' ? 'Membaca nama dari KTP...' : 'Nama akan muncul setelah foto diunggah')}</div></div>
+             {!imageUrl ? <label className="group flex min-h-[218px] cursor-pointer flex-col items-center justify-center border border-dashed border-zinc-700 bg-zinc-900/40 px-5 text-center transition hover:border-[#ff304f]/70 hover:bg-[#ff304f]/[.04]"><input type="file" accept="image/*" className="sr-only" onChange={e => handleFile(e.target.files?.[0])} /><Upload size={28} className="mb-4 text-[#ff6178] transition group-hover:scale-110" /><span className="text-sm font-medium text-zinc-200">Unggah Foto KTP untuk Verifikasi</span><span className="mt-2 text-[11px] leading-5 text-zinc-600">Sudut foto dan pencahayaan berbeda tetap bisa diproses.</span></label> : <div className="space-y-4"><div className="relative overflow-hidden border border-zinc-700 bg-black"><img src={imageUrl} alt="Pratinjau foto KTP" className="max-h-[250px] w-full object-contain" />{scanState === 'scanning' && <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/75 backdrop-blur-sm"><div className="mb-3 h-9 w-9 animate-spin rounded-full border-2 border-zinc-600 border-t-[#ff304f]" /><p className="text-sm text-zinc-200">Menganalisis dokumen OCR...</p></div>}</div><div className="flex gap-3"><button type="button" onClick={resetScanner} disabled={scanState === 'scanning'} className="btn-quiet flex h-11 flex-1 items-center justify-center gap-2 text-sm disabled:opacity-40"><RefreshCcw size={15} /> Ganti Foto</button><button type="button" onClick={scanIdentity} disabled={scanState === 'scanning'} className="btn-primary flex h-11 flex-1 items-center justify-center gap-2 text-sm font-semibold disabled:opacity-50">{scanState === 'scanning' ? 'Memindai...' : scanState === 'success' ? <><ArrowRight size={16} /> Masuk ke ruang isu</> : <><ScanLine size={16} /> Scan Identitas</>}</button></div></div>}
+             {scanState === 'success' && <div className="mt-4 border border-emerald-500/40 bg-emerald-500/10 px-3 py-3 text-sm text-emerald-300">KTP terdeteksi dari teks{extractedNik && <>: <strong className="mono">{extractedNik}</strong></>}{!extractedNik && <span className="block text-[11px] text-emerald-300/80">NIK belum terbaca sempurna, tetapi label KTP berhasil dikenali.</span>}{extractedName && <span className="mt-1 block">Nama: <strong>{extractedName}</strong></span>}<span className="mt-1 block text-[11px] text-emerald-400/70">OCR {ocrConfidence ?? 0}% · siap masuk ke ruang isu.</span></div>}
             {scanState === 'error' && error && <div className="mt-4 border border-[#ff304f]/40 bg-[#ff304f]/10 px-3 py-3 text-sm text-[#ff8495]">{error}</div>}
             <p className="mt-5 flex items-start gap-2 text-[11px] leading-5 text-zinc-600"><LockKeyhole size={13} className="mt-0.5 shrink-0" /> Foto diproses sementara di perangkat ini untuk membaca nomor identitas.</p>
             <div className="mt-8 border-t border-zinc-800 pt-5 text-center"><p className="text-[11px] leading-5 text-zinc-600">Dengan masuk, kamu menyetujui <span className="text-zinc-400">panduan komunitas</span> Demo Digital.</p></div>
@@ -160,6 +196,10 @@ function NewIssueModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (
 
 function Beranda({ issues, setIssues }: { issues: Issue[]; setIssues: Dispatch<SetStateAction<Issue[]>> }) {
   const [search, setSearch] = useState(''); const [modal, setModal] = useState(false); const [voted, setVoted] = useState<string[]>([]); const [heroSlide, setHeroSlide] = useState(0); const [actionEnd] = useState(() => Date.now() + 9 * 24 * 60 * 60 * 1000);
+  useEffect(() => {
+    const timer = window.setInterval(() => setHeroSlide((current) => current === 0 ? 1 : 0), 3000);
+    return () => window.clearInterval(timer);
+  }, []);
   const filtered = useMemo(() => issues.filter(i => `${i.title} ${i.description} ${i.category}`.toLowerCase().includes(search.toLowerCase())), [issues, search]);
   const vote = (id: string) => { if (voted.includes(id)) return; setVoted(v => [...v, id]); setIssues(all => all.map(i => i.id === id ? { ...i, votes: i.votes + 1, supporters: i.supporters + 1 } : i)); };
   const addIssue = (title: string, desc: string) => { const id = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `isu-${Date.now()}`; setIssues(all => [{ id, category: 'SUARA WARGA', title, description: desc, votes: 1, target: 5000, supporters: 1, comments: 0, author: 'Kamu', time: 'baru saja', bisaDonasi: false }, ...all]); setModal(false); };
